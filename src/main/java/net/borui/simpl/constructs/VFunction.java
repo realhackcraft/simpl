@@ -60,7 +60,6 @@ public class VFunction implements Variable {
     Map<String, Variable> initialMemory = assignArugments(memory, arguments);
     try {
       Variable returnValue = Interpreter.getInstance().scope(this.scope, initialMemory);
-      System.out.println(this.returnType);
       if (this.returnType.isInstance(returnValue)) {
         return returnValue;
       } else {
