@@ -1,0 +1,24 @@
+fn function(a: number, i: number) {
+  if (i <= 0) {
+print 555;
+return 0;
+}
+
+  print a;
+
+ function(a - 1, i - 1);
+
+}
+
+print 0;
+print 0;
+print 0;
+print 0;
+print 0;
+function(1234, 5);
+print 0;
+print 0;
+print 0;
+print 0;
+print 0;
+print 0;

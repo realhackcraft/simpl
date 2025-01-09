@@ -1,0 +1,44 @@
+let age = 76;
+
+print 76;
+print age;
+{
+  let age = 1;
+  print 1;
+  print age;
+}
+
+let computed_age = {
+  let age = 5;
+  let thing = 6;
+  let almost_there = age * 5 + thing;
+  return almost_there / 2;
+};
+
+fn test(a: number, b: number) -> number {
+  print a + b;
+  return a + b;
+}
+
+print 11;
+test(5, 6);
+
+print 76;
+print age;
+print 15.5;
+print computed_age;
+print 2.0 == 2.1;
+
+if (age > computed_age) {
+  print age;
+}
+
+if (age <= computed_age) {
+  print computed_age;
+}
+
+let i = 0;
+while (i < 5) {
+  print i;
+  i = i + 1;
+}
