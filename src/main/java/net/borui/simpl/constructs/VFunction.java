@@ -3,7 +3,6 @@ package net.borui.simpl.constructs;
 import io.github.treesitter.jtreesitter.Node;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import net.borui.simpl.datastructure.ScopedMemory;
 import net.borui.simpl.exceptions.IncorrectReturnTypeException;
 import net.borui.simpl.exceptions.InvalidArgumentException;
@@ -57,12 +56,12 @@ public class VFunction implements Variable {
     return newMemory;
   }
 
-  public Variable run(Variable[] arguments, Map<String, Variable> memory)
+  public Variable run(Variable[] arguments, ScopedMemory memory)
       throws InvalidArgumentException, IncorrectReturnTypeException, UnexpectedValueException {
     if (!validateArguments(arguments))
       throw new InvalidArgumentException();
 
-    Map<String, Variable> initialMemory = assignArugments(memory, arguments);
+    ScopedMemory initialMemory = assignArugments(memory, arguments);
     try {
       Variable returnValue = Interpreter.getInstance().scope(this.scope, initialMemory);
       if (this.returnType.isInstance(returnValue)) {
@@ -76,6 +75,9 @@ public class VFunction implements Variable {
       System.exit(1);
     } catch (InvalidVariableException e) {
       System.err.println("The variable \"" + e.variable + "\" cannot be found in the scope.");
+      e.printStackTrace();
+      System.exit(1);
+    } catch (VariableNotFound e) {
       e.printStackTrace();
       System.exit(1);
     }

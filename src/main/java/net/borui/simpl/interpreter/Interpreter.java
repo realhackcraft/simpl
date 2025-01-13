@@ -13,11 +13,13 @@ import net.borui.simpl.constructs.VNumber;
 import net.borui.simpl.constructs.VString;
 import net.borui.simpl.constructs.VUnit;
 import net.borui.simpl.constructs.Variable;
+import net.borui.simpl.datastructure.ScopedMemory;
 import net.borui.simpl.exceptions.IncorrectReturnTypeException;
 import net.borui.simpl.exceptions.InvalidArgumentException;
 import net.borui.simpl.exceptions.InvalidVariableException;
 import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
 import net.borui.simpl.exceptions.UnexpectedValueException;
+import net.borui.simpl.exceptions.VariableNotFound;
 
 public class Interpreter {
   public static Map<String, Class<? extends Variable>> typeMap = new HashMap<>();
@@ -52,15 +54,21 @@ public class Interpreter {
   }
 
   public Variable scope(List<Node> nodes)
-      throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException {
-    Map<String, Variable> memory = new HashMap<>();
+      throws UnexpectedNodeTypeException,
+      InvalidVariableException,
+      UnexpectedValueException,
+      VariableNotFound {
+    ScopedMemory memory = new ScopedMemory();
     return scope(nodes, memory);
   }
 
-  public Variable scope(List<Node> nodes, Map<String, Variable> memory)
-      throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException {
+  public Variable scope(List<Node> nodes, ScopedMemory memory)
+      throws UnexpectedNodeTypeException,
+      InvalidVariableException,
+      UnexpectedValueException,
+      VariableNotFound {
 
-    Map<String, Variable> map = new HashMap<>(memory);
+    ScopedMemory map = new ScopedMemory(memory);
     for (Node child : nodes) {
       Node statement = child.getChild(0).get();
       switch (statement.getType()) {
@@ -69,7 +77,7 @@ public class Interpreter {
           Node value = statement.getChild(3).get();
           try {
             Variable computedExpression = computeExpression(value, map);
-            map.put(identifier, computedExpression);
+            map.set(identifier, computedExpression);
           } catch (UnexpectedNodeTypeException e) {
             e.printStackTrace();
           }
@@ -145,7 +153,7 @@ public class Interpreter {
           scope.removeFirst();
           scope.removeLast();
           VFunction vFunction = new VFunction(scope, parameters, returnType);
-          map.put(fnName, vFunction);
+          map.set(fnName, vFunction);
           break;
 
         case "if_statement":
@@ -226,8 +234,11 @@ public class Interpreter {
     return new VUnit();
   }
 
-  public Variable computeExpression(Node node, Map<String, Variable> memory)
-      throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException {
+  public Variable computeExpression(Node node, ScopedMemory memory)
+      throws UnexpectedNodeTypeException,
+      InvalidVariableException,
+      UnexpectedValueException,
+      VariableNotFound {
     if (!node.getType().equals("expression"))
       throw new UnexpectedNodeTypeException("expression", node.getType());
 

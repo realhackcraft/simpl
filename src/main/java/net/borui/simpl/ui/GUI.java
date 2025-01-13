@@ -24,6 +24,7 @@ import javax.swing.JTextArea;
 import net.borui.simpl.exceptions.InvalidVariableException;
 import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
 import net.borui.simpl.exceptions.UnexpectedValueException;
+import net.borui.simpl.exceptions.VariableNotFound;
 import net.borui.simpl.interpreter.Interpreter;
 
 /** GUI */
@@ -146,7 +147,8 @@ public class GUI extends JFrame {
             Interpreter.getInstance().scope(tree.getRootNode().getChildren());
           } catch (UnexpectedNodeTypeException
               | InvalidVariableException
-              | UnexpectedValueException e) {
+              | UnexpectedValueException
+              | VariableNotFound e) {
             e.printStackTrace();
           }
         }
