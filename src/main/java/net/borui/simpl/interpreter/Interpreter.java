@@ -205,6 +205,18 @@ public class Interpreter {
             System.exit(1);
           }
           break;
+        case "while_loop":
+          ArrayList<Node> whileScope = new ArrayList<>(statement.getChild(4).get().getChildren());
+          whileScope.removeFirst();
+          whileScope.removeLast();
+          Variable whileCondition = computeExpression(statement.getChild(2).get(), map);
+          if (whileCondition instanceof VBoolean) {
+            while (((VBoolean) whileCondition).value) {
+              scope(whileScope, memory);
+            }
+          }
+
+          break;
 
         default:
           break;
@@ -248,7 +260,7 @@ public class Interpreter {
         Variable rightValue = computeExpression(right, memory);
 
         if (!(leftValue instanceof VNumber) || !(rightValue instanceof VNumber)) {
-          throw new RuntimeException("Operands must be numbers");
+          throw new RuntimeException("Operands must be numbers" + leftValue + rightValue);
         }
 
         double leftNum = ((VNumber) leftValue).value;

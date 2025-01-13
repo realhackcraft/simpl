@@ -1,15 +1,16 @@
 package net.borui.simpl.constructs;
 
 import io.github.treesitter.jtreesitter.Node;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.borui.simpl.datastructure.ScopedMemory;
 import net.borui.simpl.exceptions.IncorrectReturnTypeException;
 import net.borui.simpl.exceptions.InvalidArgumentException;
 import net.borui.simpl.exceptions.InvalidVariableException;
 import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
 import net.borui.simpl.exceptions.UnexpectedValueException;
+import net.borui.simpl.exceptions.VariableNotFound;
 import net.borui.simpl.interpreter.Interpreter;
 
 public class VFunction implements Variable {
@@ -41,15 +42,19 @@ public class VFunction implements Variable {
     return true; // All arguments match
   }
 
-  private Map<String, Variable> assignArugments(
-      Map<String, Variable> memory, Variable[] arguements) {
+  private ScopedMemory assignArugments(ScopedMemory memory, Variable[] arguements) {
     int index = 0;
-    Map<String, Variable> map = new HashMap<>(memory);
-    for (String key : parameters.keySet()) {
-      map.put(key, arguements[index]);
-      index++;
+    ScopedMemory newMemory = new ScopedMemory(memory);
+    try {
+      for (String key : parameters.keySet()) {
+        newMemory.set(key, arguements[index]);
+        index++;
+      }
+    } catch (VariableNotFound e) {
+      e.printStackTrace();
+      System.exit(1);
     }
-    return map;
+    return newMemory;
   }
 
   public Variable run(Variable[] arguments, Map<String, Variable> memory)

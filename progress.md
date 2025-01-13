@@ -80,3 +80,5 @@
   Added booleans and comparisons.
 - 2025-01-08:
   Added GUI, added if statements.
+- 2025-01-09:
+  Fixed scopes not erasing bug and functions not having recursion bug.
