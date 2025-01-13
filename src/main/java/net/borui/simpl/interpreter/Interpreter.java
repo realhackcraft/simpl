@@ -110,7 +110,7 @@ public class Interpreter {
           statements.removeLast();
           // Now statement is just a list of statements
           // No `return` because the programmer is not storing the returned value
-          scope(statements);
+          scope(statements, map);
           break;
 
         case "fn_declaration":
@@ -252,6 +252,7 @@ public class Interpreter {
         return new VBoolean(child.getText().equals("true") ? true : false);
 
       case "identifier":
+        System.out.println(memory);
         return memory.get(child.getText());
 
       case "scope":
@@ -259,7 +260,8 @@ public class Interpreter {
         statements.removeFirst();
         statements.removeLast();
         // Now statement is just a list of statements
-        return scope(statements);
+        System.out.println(memory);
+        return scope(statements, memory);
 
       case "operation":
         Node operation = child.getChild(0).get();

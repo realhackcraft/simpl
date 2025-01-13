@@ -49,4 +49,11 @@ public class ScopedMemory {
       return false;
     }
   }
+
+  @Override
+  public String toString() {
+    return currentScope.toString()
+        + "\n"
+        + (parentScope != null ? "-> " + parentScope.toString() : "");
+  }
 }
