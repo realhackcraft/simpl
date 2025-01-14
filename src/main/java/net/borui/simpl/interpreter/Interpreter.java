@@ -220,7 +220,9 @@ public class Interpreter {
           Variable whileCondition = computeExpression(statement.getChild(2).get(), map);
           if (whileCondition instanceof VBoolean) {
             while (((VBoolean) whileCondition).value) {
-              scope(whileScope, memory);
+              scope(whileScope, map);
+              // Re-evaluate condition
+              whileCondition = computeExpression(statement.getChild(2).get(), map);
             }
           }
 

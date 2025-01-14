@@ -82,3 +82,8 @@
   Added GUI, added if statements.
 - 2025-01-09:
   Fixed scopes not erasing bug and functions not having recursion bug.
+- 2025-01-10:
+  Planned ScopedMemory class for better memory structure and avoid cloning data
+  for each scope
+- 2025-01-13:
+  Finish implementing ScopedMemory
