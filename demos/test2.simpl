@@ -1,8 +1,0 @@
-print 69420;
-
-let chingchong = 69420;
-
-print chingchong;
-
-
-print chingchong>10;
