@@ -1,7 +1,7 @@
 fn print_numbers_backwards(i: number) {
  if (i >= 0) {
   print i;
-  a(i - 1);
+  print_numbers_backwards(i - 1);
  }
 }
 
