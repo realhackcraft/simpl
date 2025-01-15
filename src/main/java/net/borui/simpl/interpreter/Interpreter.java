@@ -249,6 +249,15 @@ public class Interpreter {
       case "number":
         Double value = Double.parseDouble(child.getText());
         return new VNumber(value);
+      case "string":
+        ArrayList<Node> stringContents = new ArrayList<>(child.getChildren());
+        stringContents.removeFirst();
+        stringContents.removeLast();
+        String resultString = "";
+        for (Node stringContentsNode : stringContents) {
+          resultString += stringContentsNode.getText();
+        }
+        return new VString(resultString);
 
       case "boolean":
         return new VBoolean(child.getText().equals("true") ? true : false);
