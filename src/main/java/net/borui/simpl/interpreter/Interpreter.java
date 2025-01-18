@@ -16,16 +16,18 @@ public class Interpreter {
   static {
     // Add mappings for type classes
     typeMap.put("array", VArray.class);
+    typeMap.put("any", Variable.class);
     typeMap.put("number", VNumber.class);
     typeMap.put("boolean", VBoolean.class);
     typeMap.put("string", VString.class);
-    typeMap.put("()", VUnit.class);
+    typeMap.put("unit", VUnit.class);
 
     reverseTypeMap.put(VArray.class, "array");
+    reverseTypeMap.put(Variable.class, "any");
     reverseTypeMap.put(VNumber.class, "number");
     reverseTypeMap.put(VBoolean.class, "boolean");
     reverseTypeMap.put(VString.class, "string");
-    reverseTypeMap.put(VUnit.class, "()");
+    reverseTypeMap.put(VUnit.class, "unit");
   }
 
   private Interpreter() {
@@ -239,7 +241,7 @@ public class Interpreter {
     Node child = node.getChild(0).get();
     switch (child.getType()) {
       case "number" -> {
-        double value = Double.parseDouble(child.getText());
+        double value = Double.parseDouble(Objects.requireNonNull(child.getText()));
         return new VNumber(value);
       }
       case "string" -> {
@@ -289,7 +291,8 @@ public class Interpreter {
         Variable[] arguments = new Variable[argumentCount];
         int argumentIndex = 0;
 
-        for (int j = 2; j < children.size() - 2; j += 2) {
+        // -2 with fn_call_statement
+        for (int j = 2; j < children.size() - 1; j += 2) {
           Variable expressionResult = computeExpression(children.get(j), memory);
           arguments[argumentIndex] = expressionResult;
           argumentIndex++;
@@ -355,6 +358,28 @@ public class Interpreter {
         Variable leftValue = computeExpression(left, memory);
         Variable rightValue = computeExpression(right, memory);
 
+        // Equality check with different types
+        if (!leftValue.getClass().equals(rightValue.getClass())) {
+          switch (operation.getType()) {
+            case "equal_to" -> {
+              return new VBoolean(false);
+            }
+            case "not_equal_to" -> {
+              return new VBoolean(true);
+            }
+          }
+        }
+
+        switch (operation.getType()) {
+          case "equal_to" -> {
+            return new VBoolean(leftValue.equals(rightValue));
+          }
+          case "not_equal_to" -> {
+            return new VBoolean(!leftValue.equals(rightValue));
+          }
+        }
+
+
         if (leftValue instanceof VNumber && rightValue instanceof VNumber) {
           double leftNum = ((VNumber) leftValue).value();
           double rightNum = ((VNumber) rightValue).value();
@@ -364,39 +389,44 @@ public class Interpreter {
             case "subtraction" -> new VNumber(leftNum - rightNum);
             case "multiplication" -> new VNumber(leftNum * rightNum);
             case "division" -> {
-              if (rightNum == 0) {
-                throw new RuntimeException("Division by zero");
-              }
+              if (rightNum == 0) throw new RuntimeException("Division by zero");
               yield new VNumber(leftNum / rightNum);
             }
             case "less_than" -> new VBoolean(leftNum < rightNum);
             case "less_than_or_equal_to" -> new VBoolean(leftNum <= rightNum);
             case "greater_than" -> new VBoolean(leftNum > rightNum);
             case "greater_than_or_equal_to" -> new VBoolean(leftNum >= rightNum);
-            case "equal_to" -> new VBoolean(leftNum == rightNum);
-            case "not_equal_to" -> new VBoolean(leftNum != rightNum);
             default -> throw new RuntimeException("Unknown operation: " + operator.getType());
           };
         } else if (leftValue instanceof VString(String value)) {
-          if (rightValue instanceof VString) {
-            return switch (operation.getType()) {
-              case "addition" -> new VString(value + ((VString) rightValue).value());
-              case "equal_to" -> new VBoolean(value.equals(((VString) rightValue).value()));
-              case "not_equal_to" -> new VBoolean(!value.equals(((VString) rightValue).value()));
-              default -> throw new RuntimeException("Unknown operation: " + operator.getType());
-            };
-          } else if (rightValue instanceof VNumber(double doubleValue)) {
-            if (operation.getType().equals("addition")) {
-              return new VString(value + doubleValue);
+          switch (rightValue) {
+            case VString vString -> {
+              if (operation.getType().equals("addition")) {
+                return new VString(value + vString.value());
+              } else {
+                throw new RuntimeException("Unknown operation: " + operator.getType());
+              }
             }
-          } else if (rightValue instanceof VBoolean(boolean booleanValue)) {
-            if (operation.getType().equals("addition")) {
-              return new VString(value + booleanValue);
+            case VNumber(double doubleValue) -> {
+              if (operation.getType().equals("addition")) {
+                return new VString(value + doubleValue);
+              }
+              throw new RuntimeException("Unknown operation: " + operator.getType());
             }
-          } else if (rightValue instanceof VArray arrayValue) {
-            if (operation.getType().equals("addition")) {
-              return new VString(value + arrayValue.display());
+            case VBoolean(boolean booleanValue) -> {
+              if (operation.getType().equals("addition")) {
+                return new VString(value + booleanValue);
+              }
+              throw new RuntimeException("Unknown operation: " + operator.getType());
             }
+            case VArray arrayValue -> {
+              if (operation.getType().equals("addition")) {
+                return new VString(value + arrayValue.display());
+              }
+              throw new RuntimeException("Unknown operation: " + operator.getType());
+            }
+            default ->
+                throw new RuntimeException("Cannot perform any operations between " + reverseTypeMap.get(leftValue.getClass()) + " and " + reverseTypeMap.get(rightValue.getClass()));
           }
         } else {
           throw new RuntimeException("Operands must be numbers" + leftValue + rightValue);

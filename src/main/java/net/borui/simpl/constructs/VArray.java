@@ -127,4 +127,11 @@ public class VArray implements Variable {
   public VFunction getMethod(String identifier) {
     return VArray.methods.get(identifier);
   }
+
+  @Override
+  public final boolean equals(Object o) {
+    if (!(o instanceof VArray vArray)) return false;
+
+    return value.equals(vArray.value);
+  }
 }

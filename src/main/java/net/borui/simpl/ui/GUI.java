@@ -264,7 +264,7 @@ public class GUI extends JFrame {
 
     // Remove old libtree-sitter if exists
 
-    // This is a file contening a path to the last libtree-sitter location
+    // This is a file contenting a path to the last libtree-sitter location
     Path oldLibStore = tempDir.resolve("old-lib-store");
     Path oldLibPath;
 
@@ -298,7 +298,7 @@ public class GUI extends JFrame {
 
   }
 
-  private static Path extractLibTreeSitterInternal() {
+  private static void extractLibTreeSitterInternal() {
     // Gets library from inside the jar, which is put there by the maven build
     // config
     String libName = System.mapLibraryName("tree-sitter");
@@ -338,8 +338,6 @@ public class GUI extends JFrame {
         throw new RuntimeException(e);
       }
     }
-
-    return libPath;
   }
 
   /**

@@ -15,4 +15,9 @@ public class VUnit implements Variable {
   public VFunction getMethod(String identifier) {
     return null;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof VUnit;
+  }
 }

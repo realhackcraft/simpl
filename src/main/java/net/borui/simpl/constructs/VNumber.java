@@ -16,4 +16,11 @@ public record VNumber(double value) implements Variable {
   public VFunction getMethod(String identifier) {
     return null;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof VNumber(double value1))) return false;
+
+    return Double.compare(value, value1) == 0;
+  }
 }

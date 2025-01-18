@@ -16,4 +16,11 @@ public record VString(String value) implements Variable {
   public VFunction getMethod(String identifier) {
     return null;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof VString(String value1))) return false;
+
+    return value.equals(value1);
+  }
 }

@@ -11,4 +11,11 @@ public record VBoolean(boolean value) implements Variable {
   public VFunction getMethod(String identifier) {
     return null;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof VBoolean(boolean value1))) return false;
+
+    return value == value1;
+  }
 }
