@@ -182,8 +182,8 @@ public class GUI extends JFrame {
         JOptionPane.showOptionDialog(
             this,
             "Are you sure you want to uninstall simpl?\n"
-                + "This will remove supporting libraries after SIMPLIDE is closed, and will be"
-                + " reinstalled the next time you open SIMPLIDE.",
+                + "This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM. \n"
+                + " The libraries will be reinstalled the next time you open SIMPLIDE.",
             "Uninstall Simpl",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE,
@@ -192,9 +192,20 @@ public class GUI extends JFrame {
             options[1]);
     // Accepted
     if (n == 0) {
-      // Do not allow temporary files to live after program termination
-      tempDir.toFile().deleteOnExit();
+      deleteDir(tempDir.toFile());
+      System.exit(0);
     }
+  }
+
+  // https://stackoverflow.com/questions/20281835/how-to-delete-a-folder-with-files-using-java
+  private void deleteDir(File file) {
+    File[] contents = file.listFiles();
+    if (contents != null) {
+      for (File f : contents) {
+        deleteDir(f);
+      }
+    }
+    file.delete();
   }
 
   /**
