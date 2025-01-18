@@ -33,6 +33,7 @@ public class GUI extends JFrame {
   public JTextArea output = new JTextArea();
 
   static GUI instance;
+  public Parser parser;
 
   public static GUI getInstance() {
     if (instance == null) instance = new GUI();
@@ -40,6 +41,14 @@ public class GUI extends JFrame {
   }
 
   private GUI() {
+    // Initialize cached parser
+    Arena arena = Arena.global();
+    SymbolLookup symbols =
+        SymbolLookup.libraryLookup(Path.of("./tree-sitter-simpl/simpl.dylib"), arena);
+    Language language = Language.load(symbols, "tree_sitter_simpl");
+
+    parser = new Parser(language);
+
     this.setLayout(new BorderLayout());
     this.setTitle("Simpl IDE (SIMPLIDE)");
     this.setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -135,23 +144,15 @@ public class GUI extends JFrame {
     }
   }
 
-  public static void run(String code) {
-    try (Arena arena = Arena.ofConfined()) {
-      SymbolLookup symbols =
-          SymbolLookup.libraryLookup(Path.of("./tree-sitter-simpl/simpl.dylib"), arena);
-      Language language = Language.load(symbols, "tree_sitter_simpl");
-
-      try (Parser parser = new Parser(language)) {
-        try (Tree tree = parser.parse(code).get()) {
-          try {
-            Interpreter.getInstance().scope(tree.getRootNode().getChildren());
-          } catch (UnexpectedNodeTypeException
-              | InvalidVariableException
-              | UnexpectedValueException
-              | VariableNotFound e) {
-            e.printStackTrace();
-          }
-        }
+  public void run(String code) {
+    try (Tree tree = parser.parse(code).get()) {
+      try {
+        Interpreter.getInstance().scope(tree.getRootNode().getChildren());
+      } catch (UnexpectedNodeTypeException
+          | InvalidVariableException
+          | UnexpectedValueException
+          | VariableNotFound e) {
+        e.printStackTrace();
       }
     }
   }
