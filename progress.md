@@ -89,3 +89,9 @@
   Finish implementing ScopedMemory
 - 2025-01-15:
   Added strings
+- 2025-01-17:
+  Added the shared libs inside the jar.
+  On IDE boot, copy the libs to a usable location to actually run it.
+  For libtree-sitter, do some additional logic as it can only be placed at the
+  CWD (current working directory, aka where the jar file is being executed, such
+  as the projects folder or where the user double-clicked it)

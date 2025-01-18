@@ -60,13 +60,6 @@ public class GUI extends JFrame {
         tempDir = Files.createDirectory(systemTempDir.resolve("net.borui.simpl"));
       }
 
-      // Allow java-tree-sitter library to discover native binary required
-      // without hard-coding path
-      System.setProperty(
-          "java.library.path",
-          System.getProperty("java.library.path") + ":" + tempDir.toAbsolutePath());
-      System.out.println(System.getProperty("java.library.path"));
-
       extractLibTreeSitter(tempDir);
 
       SymbolLookup symbols =
@@ -286,9 +279,7 @@ public class GUI extends JFrame {
         if (oldLibStore.toFile().exists()) {
           // Lib isn't in current dir
           if (!oldLibPath.equals(Path.of(System.getProperty("user.dir")))) {
-            System.out.println("old lib path");
-            System.out.println(oldLibPath);
-            // Files.delete(oldLibPath);
+            Files.delete(oldLibPath);
           } else {
             // Lib is in current dir
             return extractLibTreeSitterInternal();
