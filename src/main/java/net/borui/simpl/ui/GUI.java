@@ -1,5 +1,6 @@
 package net.borui.simpl.ui;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import io.github.treesitter.jtreesitter.Language;
 import io.github.treesitter.jtreesitter.Parser;
 import io.github.treesitter.jtreesitter.Tree;
@@ -24,19 +25,11 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class GUI extends JFrame {
+  static GUI instance;
   public final JEditorPane codeArea = new JEditorPane();
   public final JTextArea output = new JTextArea();
-
-  static GUI instance;
   public Parser parser;
   public Path tempDir;
-
-  public static GUI getInstance() {
-    if (instance == null)
-      instance = new GUI();
-
-    return instance;
-  }
 
   private GUI() {
     // Initialize cached parser
@@ -58,7 +51,16 @@ public class GUI extends JFrame {
       throw new RuntimeException(e);
     }
 
-    this.setLayout(new BorderLayout());
+    // https://www.formdev.com/flatlaf/
+    FlatLightLaf.setup();
+
+    try {
+      UIManager.setLookAndFeel(new FlatLightLaf());
+    } catch (Exception ex) {
+      System.err.println("Failed to initialize LaF");
+    }
+
+    this.setLayout(new GridLayout(1, 2));
     this.setTitle("Simpl IDE (SIMPLIDE)");
     this.setDefaultCloseOperation(EXIT_ON_CLOSE);
     JButton run = new JButton("Run");
@@ -73,149 +75,103 @@ public class GUI extends JFrame {
 
     JScrollPane scroll = new JScrollPane(codeArea);
     scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-    scroll.setPreferredSize(new Dimension(800, 600));
-    scroll.setMinimumSize(new Dimension(10, 10));
 
     JScrollPane outputScroll = new JScrollPane(output);
     outputScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-    outputScroll.setPreferredSize(new Dimension(250, 145));
-    outputScroll.setMinimumSize(new Dimension(10, 10));
 
-    JPanel left = new JPanel(new BorderLayout(15, 15));
-    left.add(scroll, BorderLayout.WEST);
+    // https://docs.oracle.com/javase/tutorial/uiswing/layout/gridbag.html
+    GridBagConstraints editC = new GridBagConstraints();
+    editC.gridy = 0;
+    editC.gridx = 0;
+    editC.weighty = 1;
+    editC.weightx = 1;
+    editC.fill = GridBagConstraints.BOTH;
 
-    JPanel right = new JPanel(new BorderLayout());
-    JPanel rightUp = new JPanel();
-    rightUp.add(load);
-    rightUp.add(save);
-    rightUp.add(uninstall);
-    right.add(rightUp, BorderLayout.NORTH);
+    JPanel left = new JPanel(new GridBagLayout());
+    left.add(scroll, editC);
+    left.setPreferredSize(new Dimension(480, 480));
 
-    JPanel rightMiddle = new JPanel();
-    rightMiddle.add(run);
-    right.add(rightMiddle, BorderLayout.CENTER);
+    JPanel right = new JPanel(new GridBagLayout());
+    JPanel rightUp = new JPanel(new GridBagLayout());
 
-    JPanel rightDown = new JPanel(new BorderLayout());
-    JLabel outputLabel = new JLabel("Output:");
-    rightDown.add(outputLabel, BorderLayout.NORTH);
-    rightDown.add(outputScroll, BorderLayout.SOUTH);
-    right.add(rightDown, BorderLayout.SOUTH);
+    GridBagConstraints loadC = new GridBagConstraints();
+    loadC.gridy = 0;
+    loadC.gridx = 0;
+    loadC.weightx = 0.3333;
+    loadC.weighty = 0.5;
+    loadC.insets = new Insets(4, 6, 4, 6);
+    rightUp.add(load, loadC);
 
-    this.add(left, BorderLayout.WEST);
-    this.add(right, BorderLayout.EAST);
+    GridBagConstraints saveC = new GridBagConstraints();
+    saveC.gridy = 0;
+    saveC.gridx = 1;
+    saveC.weightx = 0.3333;
+    saveC.weighty = 0.5;
+    saveC.insets = new Insets(4, 6, 4, 6);
+    rightUp.add(save, saveC);
+
+    GridBagConstraints uninstallC = new GridBagConstraints();
+    uninstallC.gridy = 0;
+    uninstallC.gridx = 2;
+    uninstallC.weightx = 0.3333;
+    uninstallC.weighty = 0.5;
+    uninstallC.insets = new Insets(4, 6, 4, 6);
+    rightUp.add(uninstall, uninstallC);
+
+    GridBagConstraints runC = new GridBagConstraints();
+    runC.gridy = 1;
+    runC.gridx = 1;
+    runC.anchor = GridBagConstraints.PAGE_END;
+    runC.weightx = 1;
+    runC.weighty = 0.5;
+    runC.insets = new Insets(4, 6, 4, 6);
+    rightUp.add(run, runC);
+
+    GridBagConstraints rightUpC = new GridBagConstraints();
+    rightUpC.gridy = 0;
+    rightUpC.gridx = 0;
+    rightUpC.weighty = 0.2;
+    rightUpC.weightx = 1;
+    rightUpC.anchor = GridBagConstraints.PAGE_START;
+    right.add(rightUp, rightUpC);
+
+    JPanel rightDown = new JPanel(new GridBagLayout());
+
+    JLabel outputLabel = new JLabel("                          Output:                          ");
+    GridBagConstraints labelC = new GridBagConstraints();
+    labelC.gridy = 0;
+    labelC.gridx = 0;
+    labelC.anchor = GridBagConstraints.PAGE_START;
+    rightDown.add(outputLabel, labelC);
+
+    GridBagConstraints scrollC = new GridBagConstraints();
+    scrollC.weighty = 1;
+    scrollC.weightx = 1;
+    scrollC.insets = new Insets(0, 10, 0, 0);
+    scrollC.fill = GridBagConstraints.BOTH;
+    scrollC.gridy = 1;
+    scrollC.gridx = 0;
+    rightDown.add(outputScroll, scrollC);
+
+    GridBagConstraints rightDownC = new GridBagConstraints();
+    rightDownC.weighty = 0.9;
+    rightDownC.gridy = 2;
+    rightDownC.gridx = 0;
+    rightDownC.fill = GridBagConstraints.BOTH;
+    right.add(rightDown, rightDownC);
+
+    this.add(new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left, right));
     this.pack();
     this.setVisible(true);
 
-    // Hook up outout to GUI
+    // Hook up output to GUI
     Interpreter.output = new GUIOut();
   }
 
-  public void runButtonClicked() {
-    output.setText("");
-    run(codeArea.getText());
-  }
+  public static GUI getInstance() {
+    if (instance == null) instance = new GUI();
 
-  // Partially taken from
-  // https://stackoverflow.com/questions/40255039/how-to-choose-file-in-java
-  public void loadButtonClicked() {
-    FileDialog dialog = new FileDialog(this, "Select .simpl File to Edit");
-    dialog.setMode(FileDialog.LOAD);
-    dialog.setVisible(true);
-    File file = new File(dialog.getDirectory(), dialog.getFile());
-    dialog.dispose();
-
-    StringBuilder program = new StringBuilder();
-    try {
-      Scanner myReader = new Scanner(file);
-      while (myReader.hasNextLine()) {
-        String data = myReader.nextLine();
-        program.append(data).append("\n");
-      }
-      myReader.close();
-    } catch (FileNotFoundException e) {
-      System.err.println("Unable to read program.");
-      throw new RuntimeException(e);
-    }
-    codeArea.setText(program.toString());
-  }
-
-  // Partially taken from
-  // https://stackoverflow.com/questions/40255039/how-to-choose-file-in-java
-  public void saveButtonClicked() {
-    FileDialog dialog = new FileDialog(this, "Save .simpl Code");
-    dialog.setMode(FileDialog.SAVE);
-    dialog.setVisible(true);
-    File file = new File(dialog.getDirectory(), dialog.getFile());
-    dialog.dispose();
-
-    try {
-      FileWriter fWriter = new FileWriter(file);
-      fWriter.write(codeArea.getText());
-      fWriter.close();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public void uninstallButtonClicked() {
-    // https://docs.oracle.com/javase/tutorial/uiswing/components/dialog.html
-    Object[] options = {
-        "Yes", "No",
-    };
-    int n = JOptionPane.showOptionDialog(
-        this,
-        """
-            Are you sure you want to uninstall simpl?
-            This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM.\s
-             The libraries will be reinstalled the next time you open SIMPLIDE.\
-            """,
-        "Uninstall Simpl",
-        JOptionPane.YES_NO_OPTION,
-        JOptionPane.QUESTION_MESSAGE,
-        null,
-        options,
-        options[1]);
-    // Accepted
-    if (n == 0) {
-      // Find current libtree-sitter location and delete it
-      Path libTreeSitterPath = Path.of(System.getProperty("user.dir")).resolve(System.mapLibraryName("tree-sitter"));
-      try {
-        Files.delete(libTreeSitterPath);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      deleteDir(tempDir.toFile());
-      System.exit(0);
-    }
-  }
-
-  // https://stackoverflow.com/questions/20281835/how-to-delete-a-folder-with-files-using-java
-  private void deleteDir(File file) {
-    File[] contents = file.listFiles();
-    if (contents != null) {
-      for (File f : contents) {
-        deleteDir(f);
-      }
-    }
-    file.delete();
-  }
-
-  /**
-   * Runs a give piece of simpl source code
-   *
-   * @param code the code to execute
-   */
-  public void run(String code) {
-    try (Tree tree = parser.parse(code).get()) {
-      try {
-        Interpreter.getInstance().scope(tree.getRootNode().getChildren());
-      } catch (UnexpectedNodeTypeException
-               | InvalidVariableException
-               | UnexpectedValueException
-               | VariableNotFound e) {
-        throw new RuntimeException(e);
-      }
-    }
+    return instance;
   }
 
   /**
@@ -311,8 +267,7 @@ public class GUI extends JFrame {
       // Prepare streaming data from jar
       // https://stackoverflow.com/questions/320542/how-to-get-the-path-of-a-running-jar-file
       try {
-        String jarPath = new File(GUI.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-            .getPath();
+        String jarPath = new File(GUI.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath();
         try (JarFile jarFile = new JarFile(jarPath)) {
           InputStream libStream = resolveSymlinkIfExists(libName, jarFile);
           if (libStream == null) {
@@ -349,16 +304,14 @@ public class GUI extends JFrame {
    * @param filePath the name of the potential symlink
    * @return the InputStream of the file
    */
-  private static InputStream resolveSymlinkIfExists(String filePath, JarFile jarFile)
-      throws IOException {
+  private static InputStream resolveSymlinkIfExists(String filePath, JarFile jarFile) throws IOException {
     JarEntry entry = jarFile.getJarEntry(filePath);
     if (entry == null) {
       throw new IllegalArgumentException("File not found: " + filePath);
     }
 
     System.out.println(isSymlink(entry));
-    if (!isSymlink(entry))
-      return jarFile.getInputStream(entry);
+    if (!isSymlink(entry)) return jarFile.getInputStream(entry);
     JarEntry targetEntry;
     // Read the symlink content
     try (InputStream symlinkStream = jarFile.getInputStream(entry)) {
@@ -389,8 +342,102 @@ public class GUI extends JFrame {
     // Symlinks typically have smaller lengths (e.g., 0 or a few bytes) compared to
     // actual files
     // Adjust the threshold based on your JAR structure
-    return length > 0
-        && length < 1023; // Assuming symlinks are smaller than 1023 bytes as that is the max path length
+    return length > 0 && length < 1023; // Assuming symlinks are smaller than 1023 bytes as that is the max path length
     // across all systems.
+  }
+
+  public void runButtonClicked() {
+    output.setText("");
+    run(codeArea.getText());
+  }
+
+  // Partially taken from
+  // https://stackoverflow.com/questions/40255039/how-to-choose-file-in-java
+  public void loadButtonClicked() {
+    FileDialog dialog = new FileDialog(this, "Select .simpl File to Edit");
+    dialog.setMode(FileDialog.LOAD);
+    dialog.setVisible(true);
+    File file = new File(dialog.getDirectory(), dialog.getFile());
+    dialog.dispose();
+
+    StringBuilder program = new StringBuilder();
+    try {
+      Scanner myReader = new Scanner(file);
+      while (myReader.hasNextLine()) {
+        String data = myReader.nextLine();
+        program.append(data).append("\n");
+      }
+      myReader.close();
+    } catch (FileNotFoundException e) {
+      System.err.println("Unable to read program.");
+      throw new RuntimeException(e);
+    }
+    codeArea.setText(program.toString());
+  }
+
+  // Partially taken from
+  // https://stackoverflow.com/questions/40255039/how-to-choose-file-in-java
+  public void saveButtonClicked() {
+    FileDialog dialog = new FileDialog(this, "Save .simpl Code");
+    dialog.setMode(FileDialog.SAVE);
+    dialog.setVisible(true);
+    File file = new File(dialog.getDirectory(), dialog.getFile());
+    dialog.dispose();
+
+    try {
+      FileWriter fWriter = new FileWriter(file);
+      fWriter.write(codeArea.getText());
+      fWriter.close();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void uninstallButtonClicked() {
+    // https://docs.oracle.com/javase/tutorial/uiswing/components/dialog.html
+    Object[] options = {"Yes", "No",};
+    int n = JOptionPane.showOptionDialog(this, """
+        Are you sure you want to uninstall simpl?
+        This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM.\s
+         The libraries will be reinstalled the next time you open SIMPLIDE.\
+        """, "Uninstall Simpl", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+    // Accepted
+    if (n == 0) {
+      // Find current libtree-sitter location and delete it
+      Path libTreeSitterPath = Path.of(System.getProperty("user.dir")).resolve(System.mapLibraryName("tree-sitter"));
+      try {
+        Files.delete(libTreeSitterPath);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      deleteDir(tempDir.toFile());
+      System.exit(0);
+    }
+  }
+
+  // https://stackoverflow.com/questions/20281835/how-to-delete-a-folder-with-files-using-java
+  private void deleteDir(File file) {
+    File[] contents = file.listFiles();
+    if (contents != null) {
+      for (File f : contents) {
+        deleteDir(f);
+      }
+    }
+    file.delete();
+  }
+
+  /**
+   * Runs a give piece of simpl source code
+   *
+   * @param code the code to execute
+   */
+  public void run(String code) {
+    try (Tree tree = parser.parse(code).get()) {
+      try {
+        Interpreter.getInstance().scope(tree.getRootNode().getChildren());
+      } catch (UnexpectedNodeTypeException | InvalidVariableException | UnexpectedValueException | VariableNotFound e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 }
