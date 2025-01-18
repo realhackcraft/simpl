@@ -6,6 +6,8 @@ import io.github.treesitter.jtreesitter.Tree;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FileDialog;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -43,6 +45,7 @@ public class GUI extends JFrame {
 
   public static GUI getInstance() {
     if (instance == null) instance = new GUI();
+
     return instance;
   }
 
@@ -62,8 +65,9 @@ public class GUI extends JFrame {
       System.setProperty(
           "java.library.path",
           System.getProperty("java.library.path") + ":" + tempDir.toAbsolutePath());
+      System.out.println(System.getProperty("java.library.path"));
 
-      extractNativeLibrary("libtree-sitter.dylib", tempDir);
+      extractLibTreeSitter(tempDir);
 
       SymbolLookup symbols =
           SymbolLookup.libraryLookup(extractNativeLibrary("simpl.dylib", tempDir), arena);
@@ -261,6 +265,76 @@ public class GUI extends JFrame {
       libPath.toFile().setExecutable(true);
     }
 
+    return libPath;
+  }
+
+  private static Path extractLibTreeSitter(Path tempDir) throws IOException {
+    // Unable to load libtree-sitter at arbitrary path. It must only be loaded
+    // at $CWD
+
+    // Remove old libtree-sitter if exists
+
+    // This is a file contening a path to the last libtree-sitter location
+    Path oldLibStore = tempDir.resolve("old-lib-store");
+    Path oldLibPath;
+
+    if (oldLibStore.toFile().exists()) {
+      // Store file exists
+      try (BufferedReader br = Files.newBufferedReader(oldLibStore)) {
+        oldLibPath = Path.of(br.readLine());
+        // Lib exists at path in the store file
+        if (oldLibStore.toFile().exists()) {
+          // Lib isn't in current dir
+          if (!oldLibPath.equals(Path.of(System.getProperty("user.dir")))) {
+            System.out.println("old lib path");
+            System.out.println(oldLibPath);
+            // Files.delete(oldLibPath);
+          } else {
+            // Lib is in current dir
+            return extractLibTreeSitterInternal();
+          }
+        }
+        // Lib in store file doesn't exist. Do normal process
+      }
+    }
+    // Store file doesn't exist. Do normal process
+
+    Path libPath = extractLibTreeSitterInternal();
+
+    try (BufferedWriter bw = Files.newBufferedWriter(oldLibStore)) {
+      bw.write(System.getProperty("user.dir"));
+    }
+
+    return libPath;
+  }
+
+  private static Path extractLibTreeSitterInternal() throws IOException {
+    // Gets library from inside the jar, which is put there by the maven build
+    // config
+    String libName = "libtree-sitter.dylib";
+
+    // CWD
+    Path libPath = Path.of(System.getProperty("user.dir")).resolve(libName);
+
+    if (!Files.exists(libPath)) {
+      // Prepare streaming data from jar
+      InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(libName);
+      if (libStream == null) {
+        throw new FileNotFoundException("Library " + libName + " not found in jar.");
+      }
+
+      // Write binary library inside the jar to outside as it is streamed in
+      try (OutputStream out = Files.newOutputStream(libPath)) {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = libStream.read(buffer)) != -1) {
+          out.write(buffer, 0, bytesRead);
+        }
+      }
+
+      // Allow execution
+      libPath.toFile().setExecutable(true);
+    }
     return libPath;
   }
 }
