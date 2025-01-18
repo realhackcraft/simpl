@@ -176,7 +176,7 @@ public class Interpreter {
           if (var == null) throw new InvalidVariableException(fn_name);
           VFunction function = (VFunction) var;
 
-          // TODO: create a list of arguments (resolve all expressions first)
+          // Create a list of arguments (resolve all expressions first)
           List<Node> children = statement.getChildren();
 
           int argumentCount = 0;
@@ -192,7 +192,7 @@ public class Interpreter {
             argumentIndex++;
           }
 
-          // TODO: call the run method on the function with a list of arguments
+          // Call the run method on the function with a list of arguments
           try {
             function.run(arguments, map);
           } catch (InvalidArgumentException e) {

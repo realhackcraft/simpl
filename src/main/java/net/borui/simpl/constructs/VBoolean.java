@@ -1,6 +1,5 @@
 package net.borui.simpl.constructs;
 
-/** VBoolean */
 public class VBoolean implements Variable {
   public boolean value;
 

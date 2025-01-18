@@ -1,6 +1,5 @@
 package net.borui.simpl.constructs;
 
-// TODO: implement
 public class VString implements Variable {
   public String value = "";
 
