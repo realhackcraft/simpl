@@ -35,8 +35,7 @@ public class GUI extends JFrame {
   static GUI instance;
 
   public static GUI getInstance() {
-    if (instance == null)
-      instance = new GUI();
+    if (instance == null) instance = new GUI();
     return instance;
   }
 
@@ -138,7 +137,8 @@ public class GUI extends JFrame {
 
   public static void run(String code) {
     try (Arena arena = Arena.ofConfined()) {
-      SymbolLookup symbols = SymbolLookup.libraryLookup(Path.of("./tree-sitter-simpl/simpl.dylib"), arena);
+      SymbolLookup symbols =
+          SymbolLookup.libraryLookup(Path.of("./tree-sitter-simpl/simpl.dylib"), arena);
       Language language = Language.load(symbols, "tree_sitter_simpl");
 
       try (Parser parser = new Parser(language)) {

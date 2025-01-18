@@ -10,8 +10,7 @@ public class ScopedMemory {
   private Map<String, Variable> currentScope = new HashMap<>();
   private ScopedMemory parentScope;
 
-  public ScopedMemory() {
-  }
+  public ScopedMemory() {}
 
   public ScopedMemory(ScopedMemory parentScope) {
     this.parentScope = parentScope;

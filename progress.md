@@ -87,3 +87,5 @@
   for each scope
 - 2025-01-13:
   Finish implementing ScopedMemory
+- 2025-01-15:
+  Added strings

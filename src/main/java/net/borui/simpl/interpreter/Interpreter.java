@@ -42,8 +42,7 @@ public class Interpreter {
     reverseTypeMap.put(VUnit.class, "()");
   }
 
-  private Interpreter() {
-  }
+  private Interpreter() {}
 
   private static class InterpreterSingletonFactory {
     private static final Interpreter INSTANCE = new Interpreter();
@@ -55,18 +54,18 @@ public class Interpreter {
 
   public Variable scope(List<Node> nodes)
       throws UnexpectedNodeTypeException,
-      InvalidVariableException,
-      UnexpectedValueException,
-      VariableNotFound {
+          InvalidVariableException,
+          UnexpectedValueException,
+          VariableNotFound {
     ScopedMemory memory = new ScopedMemory();
     return scope(nodes, memory);
   }
 
   public Variable scope(List<Node> nodes, ScopedMemory memory)
       throws UnexpectedNodeTypeException,
-      InvalidVariableException,
-      UnexpectedValueException,
-      VariableNotFound {
+          InvalidVariableException,
+          UnexpectedValueException,
+          VariableNotFound {
 
     ScopedMemory map = new ScopedMemory(memory);
     for (Node child : nodes) {
@@ -174,8 +173,7 @@ public class Interpreter {
           // TODO: look up the function with the function name
           String fn_name = statement.getChild(0).get().getText();
           Variable var = map.get(fn_name);
-          if (var == null)
-            throw new InvalidVariableException(fn_name);
+          if (var == null) throw new InvalidVariableException(fn_name);
           VFunction function = (VFunction) var;
 
           // TODO: create a list of arguments (resolve all expressions first)
@@ -183,8 +181,7 @@ public class Interpreter {
 
           int argumentCount = 0;
           for (Node node : children) {
-            if (node.getType().equals("expression"))
-              argumentCount++;
+            if (node.getType().equals("expression")) argumentCount++;
           }
           Variable[] arguments = new Variable[argumentCount];
           int argumentIndex = 0;
@@ -238,9 +235,9 @@ public class Interpreter {
 
   public Variable computeExpression(Node node, ScopedMemory memory)
       throws UnexpectedNodeTypeException,
-      InvalidVariableException,
-      UnexpectedValueException,
-      VariableNotFound {
+          InvalidVariableException,
+          UnexpectedValueException,
+          VariableNotFound {
     if (!node.getType().equals("expression"))
       throw new UnexpectedNodeTypeException("expression", node.getType());
 
@@ -263,7 +260,6 @@ public class Interpreter {
         return new VBoolean(child.getText().equals("true") ? true : false);
 
       case "identifier":
-        System.out.println(memory);
         return memory.get(child.getText());
 
       case "scope":
@@ -271,7 +267,6 @@ public class Interpreter {
         statements.removeFirst();
         statements.removeLast();
         // Now statement is just a list of statements
-        System.out.println(memory);
         return scope(statements, memory);
 
       case "operation":
@@ -283,43 +278,72 @@ public class Interpreter {
         Variable leftValue = computeExpression(left, memory);
         Variable rightValue = computeExpression(right, memory);
 
-        if (!(leftValue instanceof VNumber) || !(rightValue instanceof VNumber)) {
-          throw new RuntimeException("Operands must be numbers" + leftValue + rightValue);
-        }
+        if (leftValue instanceof VNumber && rightValue instanceof VNumber) {
+          double leftNum = ((VNumber) leftValue).value;
+          double rightNum = ((VNumber) rightValue).value;
 
-        double leftNum = ((VNumber) leftValue).value;
-        double rightNum = ((VNumber) rightValue).value;
+          switch (operation.getType()) {
+            case "addition":
+              return new VNumber(leftNum + rightNum);
 
-        switch (operation.getType()) {
-          case "addition":
-            return new VNumber(leftNum + rightNum);
+            case "subtraction":
+              return new VNumber(leftNum - rightNum);
 
-          case "subtraction":
-            return new VNumber(leftNum - rightNum);
+            case "multiplication":
+              return new VNumber(leftNum * rightNum);
 
-          case "multiplication":
-            return new VNumber(leftNum * rightNum);
+            case "division":
+              if (rightNum == 0) {
+                throw new RuntimeException("Division by zero");
+              }
+              return new VNumber(leftNum / rightNum);
+            case "less_than":
+              return new VBoolean(leftNum < rightNum);
+            case "less_than_or_equal_to":
+              return new VBoolean(leftNum <= rightNum);
+            case "greater_than":
+              return new VBoolean(leftNum > rightNum);
+            case "greater_than_or_equal_to":
+              return new VBoolean(leftNum >= rightNum);
+            case "equal_to":
+              return new VBoolean(leftNum == rightNum);
+            case "not_equal_to":
+              return new VBoolean(leftNum != rightNum);
 
-          case "division":
-            if (rightNum == 0) {
-              throw new RuntimeException("Division by zero");
+            default:
+              throw new RuntimeException("Unknown operation: " + operator.getType());
+          }
+        } else if (leftValue instanceof VString) {
+          VString leftValueString = (VString) leftValue;
+          if (rightValue instanceof VString) {
+            switch (operation.getType()) {
+              case "addition" -> {
+                return new VString(leftValueString.value + ((VString) rightValue).value);
+              }
+
+              case "equal_to" -> {
+                return new VBoolean(leftValueString.value.equals(((VString) rightValue).value));
+              }
+
+              case "not_equal_to" -> {
+                return new VBoolean(!leftValueString.value.equals(((VString) rightValue).value));
+              }
+
+              default -> {
+                throw new RuntimeException("Unknown operation: " + operator.getType());
+              }
             }
-            return new VNumber(leftNum / rightNum);
-          case "less_than":
-            return new VBoolean(leftNum < rightNum);
-          case "less_than_or_equal_to":
-            return new VBoolean(leftNum <= rightNum);
-          case "greater_than":
-            return new VBoolean(leftNum > rightNum);
-          case "greater_than_or_equal_to":
-            return new VBoolean(leftNum >= rightNum);
-          case "equal_to":
-            return new VBoolean(leftNum == rightNum);
-          case "not_equal_to":
-            return new VBoolean(leftNum != rightNum);
+          } else if (rightValue instanceof VNumber) {
+            switch (operation.getType()) {
+              case "addition" -> {
+                return new VString(leftValueString.value + ((VNumber) rightValue).value);
+              }
 
-          default:
-            throw new RuntimeException("Unknown operation: " + operator.getType());
+              default -> {}
+            }
+          }
+        } else {
+          throw new RuntimeException("Operands must be numbers" + leftValue + rightValue);
         }
     }
     return new VNumber(10);
