@@ -16,11 +16,13 @@ import java.lang.foreign.Arena;
 import java.lang.foreign.SymbolLookup;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -48,9 +50,12 @@ public class GUI extends JFrame {
     // Initialize cached parser
     Arena arena = Arena.global();
     try {
-      tempDir = Files.createTempDirectory("native-lib");
-      // Do not allow temporary files to live after program termination
-      tempDir.toFile().deleteOnExit();
+      // https://www.baeldung.com/java-temp-directories
+      Path systemTempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+      tempDir = systemTempDir.resolve("net.borui.simpl");
+      if (!Files.exists(tempDir)) {
+        tempDir = Files.createDirectory(systemTempDir.resolve("net.borui.simpl"));
+      }
 
       // Allow java-tree-sitter library to discover native binary required
       // without hard-coding path
@@ -75,10 +80,12 @@ public class GUI extends JFrame {
     JButton run = new JButton("Run");
     JButton load = new JButton("Load");
     JButton save = new JButton("Save");
+    JButton uninstall = new JButton("Uninstall");
 
     run.addActionListener(new RunButtonListener());
     load.addActionListener(new LoadButtonListener());
     save.addActionListener(new SaveButtonListener());
+    uninstall.addActionListener(new UninstallButtonListener());
 
     JScrollPane scroll = new JScrollPane(codeArea);
     scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -97,7 +104,9 @@ public class GUI extends JFrame {
     JPanel rightUp = new JPanel();
     rightUp.add(load);
     rightUp.add(save);
+    rightUp.add(uninstall);
     right.add(rightUp, BorderLayout.NORTH);
+
     JPanel rightMiddle = new JPanel();
     rightMiddle.add(run);
     right.add(rightMiddle, BorderLayout.CENTER);
@@ -164,6 +173,30 @@ public class GUI extends JFrame {
     }
   }
 
+  public void uninstallButtonClicked() {
+    // https://docs.oracle.com/javase/tutorial/uiswing/components/dialog.html
+    Object[] options = {
+      "Yes", "No",
+    };
+    int n =
+        JOptionPane.showOptionDialog(
+            this,
+            "Are you sure you want to uninstall simpl?\n"
+                + "This will remove supporting libraries after SIMPLIDE is closed, and will be"
+                + " reinstalled the next time you open SIMPLIDE.",
+            "Uninstall Simpl",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[1]);
+    // Accepted
+    if (n == 0) {
+      // Do not allow temporary files to live after program termination
+      tempDir.toFile().deleteOnExit();
+    }
+  }
+
   /**
    * Runs a give piece of simpl source code
    *
@@ -183,30 +216,40 @@ public class GUI extends JFrame {
   }
 
   /**
-   * @param resourcePath the path of the resource inside the jar
+   * Extracts the resourcePath from within the jar file and puts it in tempDir. Will reuse library
+   * if already exists in tempDir.
+   *
+   * @param libName the path of the library inside the jar
+   * @param tempDir the path to store the libraries
    * @return the path to the extracted library
    * @throws IOException
    */
-  private static Path extractNativeLibrary(String resourcePath, Path tempDir) throws IOException {
+  private static Path extractNativeLibrary(String libName, Path tempDir) throws IOException {
     // Gets library from insude the jar, which is put there by the maven build
     // config
-    InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(resourcePath);
-    if (libStream == null) {
-      throw new FileNotFoundException("Library " + resourcePath + " not found in jar.");
-    }
 
-    Path tempLibFile = tempDir.resolve(resourcePath);
+    Path libPath = tempDir.resolve(libName);
 
-    // Write binary library inside the jar to outside
-    try (OutputStream out = Files.newOutputStream(tempLibFile)) {
-      byte[] buffer = new byte[8192];
-      int bytesRead;
-      while ((bytesRead = libStream.read(buffer)) != -1) {
-        out.write(buffer, 0, bytesRead);
+    if (!Files.exists(libPath)) {
+      // Prepare streaming data from jar
+      InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(libName);
+      if (libStream == null) {
+        throw new FileNotFoundException("Library " + libName + " not found in jar.");
       }
+
+      // Write binary library inside the jar to outside as it is streamed in
+      try (OutputStream out = Files.newOutputStream(libPath)) {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = libStream.read(buffer)) != -1) {
+          out.write(buffer, 0, bytesRead);
+        }
+      }
+
+      // Allow execution
+      libPath.toFile().setExecutable(true);
     }
 
-    tempLibFile.toFile().setExecutable(true);
-    return tempLibFile;
+    return libPath;
   }
 }
