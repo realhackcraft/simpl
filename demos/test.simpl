@@ -60,3 +60,6 @@ while (i < 5) {
 
 print "Expected: HelloWorld";
 print "Hello" + "World";
+
+print "Now Running: Array Test";
+print [1, 2, 3];

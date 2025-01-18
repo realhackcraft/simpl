@@ -1,6 +1,5 @@
 package net.borui.simpl.interpreter;
 
-/** SystemOut */
 public class SystemOut extends ProgramOutput {
   @Override
   public void println(String a) {

@@ -3,7 +3,6 @@ package net.borui.simpl.ui;
 import javax.swing.JTextArea;
 import net.borui.simpl.interpreter.ProgramOutput;
 
-/** GUIOut */
 public class GUIOut extends ProgramOutput {
   @Override
   public void println(String a) {

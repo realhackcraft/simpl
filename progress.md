@@ -95,3 +95,9 @@
   For libtree-sitter, do some additional logic as it can only be placed at the
   CWD (current working directory, aka where the jar file is being executed, such
   as the projects folder or where the user double-clicked it)
+- 2025-01-17:
+  Added uninstall button to remove libraries.
+- 2025-01-18:
+  Account for when libtree-sitter Is stored in the jar as a symlink.
+- 2025-01-18:
+  Added arrays.

@@ -38,7 +38,6 @@ import net.borui.simpl.exceptions.UnexpectedValueException;
 import net.borui.simpl.exceptions.VariableNotFound;
 import net.borui.simpl.interpreter.Interpreter;
 
-/** GUI */
 public class GUI extends JFrame {
   public JEditorPane codeArea = new JEditorPane();
   public JTextArea output = new JTextArea();

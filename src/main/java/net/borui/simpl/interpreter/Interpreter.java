@@ -42,7 +42,8 @@ public class Interpreter {
     reverseTypeMap.put(VUnit.class, "()");
   }
 
-  private Interpreter() {}
+  private Interpreter() {
+  }
 
   private static class InterpreterSingletonFactory {
     private static final Interpreter INSTANCE = new Interpreter();
@@ -54,18 +55,18 @@ public class Interpreter {
 
   public Variable scope(List<Node> nodes)
       throws UnexpectedNodeTypeException,
-          InvalidVariableException,
-          UnexpectedValueException,
-          VariableNotFound {
+      InvalidVariableException,
+      UnexpectedValueException,
+      VariableNotFound {
     ScopedMemory memory = new ScopedMemory();
     return scope(nodes, memory);
   }
 
   public Variable scope(List<Node> nodes, ScopedMemory memory)
       throws UnexpectedNodeTypeException,
-          InvalidVariableException,
-          UnexpectedValueException,
-          VariableNotFound {
+      InvalidVariableException,
+      UnexpectedValueException,
+      VariableNotFound {
 
     ScopedMemory map = new ScopedMemory(memory);
     for (Node child : nodes) {
@@ -170,10 +171,11 @@ public class Interpreter {
           }
           break;
         case "fn_call":
-          // TODO: look up the function with the function name
+          // Look up the function with the function name
           String fn_name = statement.getChild(0).get().getText();
           Variable var = map.get(fn_name);
-          if (var == null) throw new InvalidVariableException(fn_name);
+          if (var == null)
+            throw new InvalidVariableException(fn_name);
           VFunction function = (VFunction) var;
 
           // Create a list of arguments (resolve all expressions first)
@@ -181,7 +183,8 @@ public class Interpreter {
 
           int argumentCount = 0;
           for (Node node : children) {
-            if (node.getType().equals("expression")) argumentCount++;
+            if (node.getType().equals("expression"))
+              argumentCount++;
           }
           Variable[] arguments = new Variable[argumentCount];
           int argumentIndex = 0;
@@ -235,9 +238,9 @@ public class Interpreter {
 
   public Variable computeExpression(Node node, ScopedMemory memory)
       throws UnexpectedNodeTypeException,
-          InvalidVariableException,
-          UnexpectedValueException,
-          VariableNotFound {
+      InvalidVariableException,
+      UnexpectedValueException,
+      VariableNotFound {
     if (!node.getType().equals("expression"))
       throw new UnexpectedNodeTypeException("expression", node.getType());
 
@@ -258,6 +261,20 @@ public class Interpreter {
 
       case "boolean":
         return new VBoolean(child.getText().equals("true") ? true : false);
+
+      case "array":
+        ArrayList<Node> arrayElements = new ArrayList<>(child.getChildren());
+        arrayElements.removeFirst();
+        arrayElements.removeLast();
+
+        ArrayList<Variable> arrayVariables = new ArrayList<>();
+        for (int i = 0; i < arrayElements.size(); i += 2) {
+          Node expressionNode = arrayElements.get(i);
+          Variable expressionValue = computeExpression(expressionNode, memory);
+          arrayVariables.add(expressionValue);
+        }
+
+        return new VArray(arrayVariables);
 
       case "identifier":
         return memory.get(child.getText());
@@ -339,7 +356,8 @@ public class Interpreter {
                 return new VString(leftValueString.value + ((VNumber) rightValue).value);
               }
 
-              default -> {}
+              default -> {
+              }
             }
           }
         } else {
