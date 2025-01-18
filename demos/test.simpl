@@ -51,7 +51,7 @@ print "1";
 print "2";
 print "3";
 print "4";
-print "Actual: "
+print "Actual: ";
 let i = 0;
 while (i < 5) {
   print i;
@@ -62,4 +62,34 @@ print "Expected: HelloWorld";
 print "Hello" + "World";
 
 print "Now Running: Array Test";
-print [1, 2, 3];
+let arr = [1, true, "test"];
+
+print "Expected: [1, true, test]";
+print "Actual: " + arr;
+
+print "Expected: true";
+print "Actual: " + arr.get(1);
+
+print "Expected: [1, true, test, 5]";
+arr.push(5);
+print "Actual: " + arr;
+
+print "Expected: [1, true, test]";
+arr.pop();
+print "Actual: " + arr;
+
+print "Expected: [1, test, true]";
+arr.push(true);
+arr.remove_element(true);
+print "Actual: " + arr;
+
+print "Expected: [test, true]";
+arr.remove(0);
+print "Actual: " + arr;
+
+print "Expected: 2";
+print "Actual: " + arr.length();
+
+print "Expected: [test, false]";
+arr.set(1, false);
+print "Actual: " + arr;

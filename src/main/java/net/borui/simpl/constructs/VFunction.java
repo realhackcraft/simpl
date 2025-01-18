@@ -1,32 +1,26 @@
 package net.borui.simpl.constructs;
 
 import io.github.treesitter.jtreesitter.Node;
-import java.util.LinkedHashMap;
-import java.util.List;
 import net.borui.simpl.datastructure.ScopedMemory;
-import net.borui.simpl.exceptions.IncorrectReturnTypeException;
-import net.borui.simpl.exceptions.InvalidArgumentException;
-import net.borui.simpl.exceptions.InvalidVariableException;
-import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
-import net.borui.simpl.exceptions.UnexpectedValueException;
-import net.borui.simpl.exceptions.VariableNotFound;
+import net.borui.simpl.exceptions.*;
 import net.borui.simpl.interpreter.Interpreter;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+
 public class VFunction implements Variable {
-  private List<Node> scope;
+  private final List<Node> scope;
   public final LinkedHashMap<String, Class<? extends Variable>> parameters;
   public final Class<? extends Variable> returnType;
 
-  public VFunction(
-      List<Node> scope,
-      LinkedHashMap<String, Class<? extends Variable>> parameters,
-      Class<? extends Variable> returnType) {
+  public VFunction(List<Node> scope, LinkedHashMap<String, Class<? extends Variable>> parameters, Class<? extends Variable> returnType) {
     this.scope = scope;
     this.parameters = parameters;
     this.returnType = returnType;
   }
 
-  private boolean validateArguments(Variable[] arguments) {
+  // https://stackoverflow.com/questions/215497/what-is-the-difference-between-public-protected-package-private-and-private-in
+  protected boolean validateArguments(Variable[] arguments) {
     if (arguments.length != parameters.size()) {
       return false; // Argument count mismatch
     }
@@ -41,27 +35,20 @@ public class VFunction implements Variable {
     return true; // All arguments match
   }
 
-  private ScopedMemory assignArugments(ScopedMemory memory, Variable[] arguements) {
+  protected ScopedMemory assignArguments(ScopedMemory memory, Variable[] arguments) {
     int index = 0;
     ScopedMemory newMemory = new ScopedMemory(memory);
-    try {
-      for (String key : parameters.keySet()) {
-        newMemory.set(key, arguements[index]);
-        index++;
-      }
-    } catch (VariableNotFound e) {
-      e.printStackTrace();
-      System.exit(1);
+    for (String key : parameters.keySet()) {
+      newMemory.set(key, arguments[index]);
+      index++;
     }
     return newMemory;
   }
 
-  public Variable run(Variable[] arguments, ScopedMemory memory)
-      throws InvalidArgumentException, IncorrectReturnTypeException, UnexpectedValueException {
-    if (!validateArguments(arguments))
-      throw new InvalidArgumentException();
+  public Variable run(Variable[] arguments, ScopedMemory memory) throws InvalidArgumentException, IncorrectReturnTypeException, UnexpectedValueException {
+    if (!validateArguments(arguments)) throw new InvalidArgumentException();
 
-    ScopedMemory initialMemory = assignArugments(memory, arguments);
+    ScopedMemory initialMemory = assignArguments(memory, arguments);
     try {
       Variable returnValue = Interpreter.getInstance().scope(this.scope, initialMemory);
       if (this.returnType.isInstance(returnValue)) {
@@ -71,19 +58,13 @@ public class VFunction implements Variable {
       }
     } catch (UnexpectedNodeTypeException e) {
       System.err.println("The scope List<Node> contains unexcecutable tokens.");
-      e.printStackTrace();
-      System.exit(1);
+      throw new RuntimeException(e);
     } catch (InvalidVariableException e) {
       System.err.println("The variable \"" + e.variable + "\" cannot be found in the scope.");
-      e.printStackTrace();
-      System.exit(1);
+      throw new RuntimeException(e);
     } catch (VariableNotFound e) {
-      e.printStackTrace();
-      System.exit(1);
+      throw new RuntimeException(e);
     }
-
-    // This should never be excecuted
-    return new VUnit();
   }
 
   @Override
@@ -94,5 +75,10 @@ public class VFunction implements Variable {
   @Override
   public String display() {
     return "";
+  }
+
+  @Override
+  public VFunction getMethod(String identifier) {
+    return null;
   }
 }

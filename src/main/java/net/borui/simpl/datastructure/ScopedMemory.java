@@ -1,16 +1,20 @@
 package net.borui.simpl.datastructure;
 
-import java.util.HashMap;
-import java.util.Map;
 import net.borui.simpl.constructs.Variable;
 import net.borui.simpl.exceptions.VariableNotFound;
 
-/** ScopedMemory */
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * ScopedMemory
+ */
 public class ScopedMemory {
-  private Map<String, Variable> currentScope = new HashMap<>();
+  private final Map<String, Variable> currentScope = new HashMap<>();
   private ScopedMemory parentScope;
 
-  public ScopedMemory() {}
+  public ScopedMemory() {
+  }
 
   public ScopedMemory(ScopedMemory parentScope) {
     this.parentScope = parentScope;
@@ -29,11 +33,11 @@ public class ScopedMemory {
     return returnValue;
   }
 
-  public void set(String name, Variable value) throws VariableNotFound {
+  public void set(String name, Variable value) {
     // if var in current: put in current scope.
     // If no var in current scope and no var in parent scope: put var in current
     // scope.
-    // Else if has var in parent scope but not current scope: set in parent scope
+    // Else if var in parent scope but not current scope: set in parent scope
     if (currentScope.containsKey(name) || (parentScope == null || !parentScope.containsKey(name))) {
       currentScope.put(name, value);
     } else {
@@ -42,17 +46,11 @@ public class ScopedMemory {
   }
 
   public boolean containsKey(String name) {
-    if (currentScope.containsKey(name) || (parentScope != null && parentScope.containsKey(name))) {
-      return true;
-    } else {
-      return false;
-    }
+    return currentScope.containsKey(name) || (parentScope != null && parentScope.containsKey(name));
   }
 
   @Override
   public String toString() {
-    return currentScope.toString()
-        + "\n"
-        + (parentScope != null ? "-> " + parentScope.toString() : "");
+    return currentScope + "\n" + (parentScope != null ? "-> " + parentScope : "");
   }
 }

@@ -16,7 +16,7 @@ class Main {
     // myReader.close();
     // } catch (FileNotFoundException e) {
     // System.err.println("Unable to read program.");
-    // e.printStackTrace();
+    // throw new RuntimeException(e);
     // }
     // try (Arena arena = Arena.ofConfined()) {
     // SymbolLookup symbols =
@@ -31,7 +31,7 @@ class Main {
     // } catch (UnexpectedNodeTypeException
     // | InvalidVariableException
     // | UnexpectedValueException e) {
-    // e.printStackTrace();
+    // throw new RuntimeException(e);
     // }
     // }
     // }

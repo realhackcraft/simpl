@@ -1,11 +1,6 @@
 package net.borui.simpl.constructs;
 
-public class VString implements Variable {
-  public String value = "";
-
-  public VString(String value) {
-    this.value = value;
-  }
+public record VString(String value) implements Variable {
 
   @Override
   public String toString() {
@@ -15,5 +10,10 @@ public class VString implements Variable {
   @Override
   public String display() {
     return value;
+  }
+
+  @Override
+  public VFunction getMethod(String identifier) {
+    return null;
   }
 }

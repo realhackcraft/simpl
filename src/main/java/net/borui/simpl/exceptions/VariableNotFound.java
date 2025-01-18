@@ -1,8 +1,11 @@
 package net.borui.simpl.exceptions;
 
-/** VariableNotFound */
+/**
+ * VariableNotFound
+ */
+@SuppressWarnings("CallToPrintStackTrace")
 public class VariableNotFound extends Exception {
-  private String variableName;
+  private final String variableName;
 
   public VariableNotFound(String variableName) {
     this.variableName = variableName;
@@ -12,6 +15,5 @@ public class VariableNotFound extends Exception {
   public void printStackTrace() {
     System.err.println("The variable named: " + this.variableName + " cannot be found.");
     super.printStackTrace();
-    System.exit(1);
   }
 }

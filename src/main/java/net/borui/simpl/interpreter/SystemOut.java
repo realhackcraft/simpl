@@ -10,8 +10,7 @@ public class SystemOut extends ProgramOutput {
 
   @Override
   public ProgramOutput getInstance() {
-    if (instance == null)
-      instance = new SystemOut();
+    if (instance == null) instance = new SystemOut();
     return instance;
   }
 }

@@ -1,8 +1,9 @@
 package net.borui.simpl.exceptions;
 
+@SuppressWarnings("CallToPrintStackTrace")
 public class UnexpectedNodeTypeException extends Exception {
-  private String expected;
-  private String actual;
+  private final String expected;
+  private final String actual;
 
   public UnexpectedNodeTypeException(String expected, String actual) {
     this.expected = expected;

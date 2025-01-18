@@ -10,4 +10,9 @@ public class VUnit implements Variable {
   public String display() {
     return "()";
   }
+
+  @Override
+  public VFunction getMethod(String identifier) {
+    return null;
+  }
 }

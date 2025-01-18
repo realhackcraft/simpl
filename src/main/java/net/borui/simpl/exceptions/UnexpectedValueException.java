@@ -2,11 +2,14 @@ package net.borui.simpl.exceptions;
 
 import net.borui.simpl.constructs.Variable;
 
-/** UnexpectedValueException */
+/**
+ * UnexpectedValueException
+ */
+@SuppressWarnings("CallToPrintStackTrace")
 public class UnexpectedValueException extends Exception {
-  private Variable result;
-  private String expected;
-  private String actual;
+  private final Variable result;
+  private final String expected;
+  private final String actual;
 
   public UnexpectedValueException(Variable result, String expected, String actual) {
     this.result = result;

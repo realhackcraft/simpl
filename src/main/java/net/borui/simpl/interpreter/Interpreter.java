@@ -1,29 +1,15 @@
 package net.borui.simpl.interpreter;
 
 import io.github.treesitter.jtreesitter.Node;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import net.borui.simpl.constructs.VArray;
-import net.borui.simpl.constructs.VBoolean;
-import net.borui.simpl.constructs.VFunction;
-import net.borui.simpl.constructs.VNumber;
-import net.borui.simpl.constructs.VString;
-import net.borui.simpl.constructs.VUnit;
-import net.borui.simpl.constructs.Variable;
+import net.borui.simpl.constructs.*;
 import net.borui.simpl.datastructure.ScopedMemory;
-import net.borui.simpl.exceptions.IncorrectReturnTypeException;
-import net.borui.simpl.exceptions.InvalidArgumentException;
-import net.borui.simpl.exceptions.InvalidVariableException;
-import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
-import net.borui.simpl.exceptions.UnexpectedValueException;
-import net.borui.simpl.exceptions.VariableNotFound;
+import net.borui.simpl.exceptions.*;
+
+import java.util.*;
 
 public class Interpreter {
-  public static Map<String, Class<? extends Variable>> typeMap = new HashMap<>();
-  public static Map<Class<? extends Variable>, String> reverseTypeMap = new HashMap<>();
+  public static final Map<String, Class<? extends Variable>> typeMap = new HashMap<>();
+  public static final Map<Class<? extends Variable>, String> reverseTypeMap = new HashMap<>();
 
   public static ProgramOutput output = new SystemOut();
 
@@ -53,46 +39,36 @@ public class Interpreter {
     return InterpreterSingletonFactory.INSTANCE;
   }
 
-  public Variable scope(List<Node> nodes)
-      throws UnexpectedNodeTypeException,
-      InvalidVariableException,
-      UnexpectedValueException,
-      VariableNotFound {
+  public void scope(List<Node> nodes) throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException, VariableNotFound {
     ScopedMemory memory = new ScopedMemory();
-    return scope(nodes, memory);
+    scope(nodes, memory);
   }
 
-  public Variable scope(List<Node> nodes, ScopedMemory memory)
-      throws UnexpectedNodeTypeException,
-      InvalidVariableException,
-      UnexpectedValueException,
-      VariableNotFound {
+  public Variable scope(List<Node> nodes, ScopedMemory memory) throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException, VariableNotFound {
 
     ScopedMemory map = new ScopedMemory(memory);
     for (Node child : nodes) {
       Node statement = child.getChild(0).get();
       switch (statement.getType()) {
-        case "let_declaration":
+        case "let_declaration" -> {
           String identifier = statement.getChild(1).get().getText();
           Node value = statement.getChild(3).get();
           try {
             Variable computedExpression = computeExpression(value, map);
             map.set(identifier, computedExpression);
           } catch (UnexpectedNodeTypeException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
-          break;
-
-        case "print_statement":
+        }
+        case "print_statement" -> {
           Node printExpression = statement.getChild(1).get();
           try {
             output.println(computeExpression(printExpression, map).display());
           } catch (UnexpectedNodeTypeException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
-          break;
-
-        case "return_statement":
+        }
+        case "return_statement" -> {
           if (statement.getChild(1).get().getType().equals(";")) {
             return new VUnit();
           }
@@ -100,20 +76,18 @@ public class Interpreter {
           try {
             return computeExpression(returnExpression, map);
           } catch (UnexpectedNodeTypeException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
-          break;
-
-        case "scope":
+        }
+        case "scope" -> {
           List<Node> statements = new ArrayList<>(child.getChild(0).get().getChildren());
           statements.removeFirst();
           statements.removeLast();
           // Now statement is just a list of statements
           // No `return` because the programmer is not storing the returned value
           scope(statements, map);
-          break;
-
-        case "fn_declaration":
+        }
+        case "fn_declaration" -> {
           String fnName = statement.getChild(1).get().getText();
           // Loop over all the parameters, skipping commas and stopping at ")"
           LinkedHashMap<String, Class<? extends Variable>> parameters = new LinkedHashMap<>();
@@ -124,9 +98,8 @@ public class Interpreter {
           boolean skipParams = statement.getChild(i).get().getText().equals(")");
           if (!skipParams) {
             for (; !statement.getChild(i - 1).get().getType().equals(")"); i += 2) {
-              if (!statement.getChild(i).get().getType().equals("typed_indentifier")) {
-                throw new UnexpectedNodeTypeException(
-                    "typed_indentifier", statement.getChild(i).get().getType());
+              if (!statement.getChild(i).get().getType().equals("typed_identifier")) {
+                throw new UnexpectedNodeTypeException("typed_identifier", statement.getChild(i).get().getType());
               }
 
               Node typedId = statement.getChild(i).get();
@@ -154,28 +127,25 @@ public class Interpreter {
           scope.removeLast();
           VFunction vFunction = new VFunction(scope, parameters, returnType);
           map.set(fnName, vFunction);
-          break;
-
-        case "if_statement":
+        }
+        case "if_statement" -> {
           Variable expression = computeExpression(statement.getChild(2).get(), map);
           if (!(expression instanceof VBoolean))
-            throw new UnexpectedValueException(
-                expression, "boolean", reverseTypeMap.get(expression.getClass()));
+            throw new UnexpectedValueException(expression, "boolean", reverseTypeMap.get(expression.getClass()));
 
-          boolean ifExpressionResult = ((VBoolean) expression).value;
+          boolean ifExpressionResult = ((VBoolean) expression).value();
           if (ifExpressionResult) {
             ArrayList<Node> ifScope = new ArrayList<>(statement.getChild(4).get().getChildren());
             ifScope.removeFirst();
             ifScope.removeLast();
             scope(ifScope, map);
           }
-          break;
-        case "fn_call":
+        }
+        case "fn_call_statement" -> {
           // Look up the function with the function name
           String fn_name = statement.getChild(0).get().getText();
           Variable var = map.get(fn_name);
-          if (var == null)
-            throw new InvalidVariableException(fn_name);
+          if (var == null) throw new InvalidVariableException(fn_name);
           VFunction function = (VFunction) var;
 
           // Create a list of arguments (resolve all expressions first)
@@ -183,8 +153,7 @@ public class Interpreter {
 
           int argumentCount = 0;
           for (Node node : children) {
-            if (node.getType().equals("expression"))
-              argumentCount++;
+            if (node.getType().equals("expression")) argumentCount++;
           }
           Variable[] arguments = new Variable[argumentCount];
           int argumentIndex = 0;
@@ -199,70 +168,88 @@ public class Interpreter {
           try {
             function.run(arguments, map);
           } catch (InvalidArgumentException e) {
-            e.printStackTrace();
-            System.exit(1);
+            throw new RuntimeException(e);
           } catch (IncorrectReturnTypeException e) {
-            System.err.println(
-                "The function \""
-                    + fn_name
-                    + "\" expects a return type of \""
-                    + e.expected
-                    + "\" but got \""
-                    + e.actual);
-            e.printStackTrace();
-            System.exit(1);
+            System.err.println("The function \"" + fn_name + "\" expects a return type of \"" + e.expected + "\" but got \"" + e.actual);
+            throw new RuntimeException(e);
           }
-          break;
-        case "while_loop":
+        }
+        case "method_call_statement" -> {
+          String identifier = statement.getChild(0).get().getText();
+          Node methodFn = statement.getChild(2).get();
+          String methodFnName = methodFn.getChild(0).get().getText();
+
+          Variable variable = map.get(identifier);
+          VFunction method = variable.getMethod(methodFnName);
+
+          // Create a list of arguments (resolve all expressions first)
+          List<Node> argumentNodes = methodFn.getChildren();
+
+          int argumentCount = 1;
+          for (Node node : argumentNodes) {
+            if (node.getType().equals("expression")) argumentCount++;
+          }
+          Variable[] arguments = new Variable[argumentCount];
+          arguments[0] = variable;
+          int argumentIndex = 1;
+
+          // -1 seems to work here whereas -2 works with functions
+          for (int j = 2; j < argumentNodes.size() - 1; j += 2) {
+            Variable expressionResult = computeExpression(argumentNodes.get(j), map);
+            arguments[argumentIndex] = expressionResult;
+            argumentIndex++;
+          }
+
+          try {
+            method.run(arguments, map);
+          } catch (InvalidArgumentException | IncorrectReturnTypeException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        case "while_loop" -> {
           ArrayList<Node> whileScope = new ArrayList<>(statement.getChild(4).get().getChildren());
           whileScope.removeFirst();
           whileScope.removeLast();
           Variable whileCondition = computeExpression(statement.getChild(2).get(), map);
           if (whileCondition instanceof VBoolean) {
-            while (((VBoolean) whileCondition).value) {
+            while (((VBoolean) whileCondition).value()) {
               scope(whileScope, map);
               // Re-evaluate condition
               whileCondition = computeExpression(statement.getChild(2).get(), map);
             }
           }
-
-          break;
-
-        default:
-          break;
+        }
+        default -> {
+        }
       }
     }
 
     return new VUnit();
   }
 
-  public Variable computeExpression(Node node, ScopedMemory memory)
-      throws UnexpectedNodeTypeException,
-      InvalidVariableException,
-      UnexpectedValueException,
-      VariableNotFound {
-    if (!node.getType().equals("expression"))
-      throw new UnexpectedNodeTypeException("expression", node.getType());
+  public Variable computeExpression(Node node, ScopedMemory memory) throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException, VariableNotFound {
+    if (!node.getType().equals("expression")) throw new UnexpectedNodeTypeException("expression", node.getType());
 
     Node child = node.getChild(0).get();
     switch (child.getType()) {
-      case "number":
-        Double value = Double.parseDouble(child.getText());
+      case "number" -> {
+        double value = Double.parseDouble(child.getText());
         return new VNumber(value);
-      case "string":
+      }
+      case "string" -> {
         ArrayList<Node> stringContents = new ArrayList<>(child.getChildren());
         stringContents.removeFirst();
         stringContents.removeLast();
-        String resultString = "";
+        StringBuilder resultString = new StringBuilder();
         for (Node stringContentsNode : stringContents) {
-          resultString += stringContentsNode.getText();
+          resultString.append(stringContentsNode.getText());
         }
-        return new VString(resultString);
-
-      case "boolean":
-        return new VBoolean(child.getText().equals("true") ? true : false);
-
-      case "array":
+        return new VString(resultString.toString());
+      }
+      case "boolean" -> {
+        return new VBoolean(child.getText().equals("true"));
+      }
+      case "array" -> {
         ArrayList<Node> arrayElements = new ArrayList<>(child.getChildren());
         arrayElements.removeFirst();
         arrayElements.removeLast();
@@ -275,18 +262,83 @@ public class Interpreter {
         }
 
         return new VArray(arrayVariables);
-
-      case "identifier":
+      }
+      case "identifier" -> {
         return memory.get(child.getText());
+      }
+      case "fn_call" -> {
+        // Look up the function with the function name
+        String fn_name = child.getChild(0).get().getText();
+        Variable var = memory.get(fn_name);
+        if (var == null) throw new InvalidVariableException(fn_name);
+        VFunction function = (VFunction) var;
 
-      case "scope":
+        // Create a list of arguments (resolve all expressions first)
+        List<Node> children = child.getChildren();
+
+        int argumentCount = 0;
+        for (Node childrenNode : children) {
+          if (childrenNode.getType().equals("expression")) argumentCount++;
+        }
+        Variable[] arguments = new Variable[argumentCount];
+        int argumentIndex = 0;
+
+        for (int j = 2; j < children.size() - 2; j += 2) {
+          Variable expressionResult = computeExpression(children.get(j), memory);
+          arguments[argumentIndex] = expressionResult;
+          argumentIndex++;
+        }
+
+        // Call the run method on the function with a list of arguments
+        try {
+          return function.run(arguments, memory);
+        } catch (InvalidArgumentException e) {
+          throw new RuntimeException(e);
+        } catch (IncorrectReturnTypeException e) {
+          System.err.println("The function \"" + fn_name + "\" expects a return type of \"" + e.expected + "\" but got \"" + e.actual);
+          throw new RuntimeException(e);
+        }
+      }
+      case "method_call" -> {
+        String identifier = child.getChild(0).get().getText();
+        Node methodFn = child.getChild(2).get();
+        String methodFnName = methodFn.getChild(0).get().getText();
+
+        Variable variable = memory.get(identifier);
+        VFunction method = variable.getMethod(methodFnName);
+
+        // Create a list of arguments (resolve all expressions first)
+        List<Node> argumentNodes = methodFn.getChildren();
+
+        int argumentCount = 1;
+        for (Node argumentNode : argumentNodes) {
+          if (argumentNode.getType().equals("expression")) argumentCount++;
+        }
+        Variable[] arguments = new Variable[argumentCount];
+        arguments[0] = variable;
+        int argumentIndex = 1;
+
+        // Method_call_statement requires -1 for ")" and -1 for ";", but because the ";" doesn't exist here, it is only -1.
+        for (int j = 2; j < argumentNodes.size() - 1; j += 2) {
+          Variable expressionResult = computeExpression(argumentNodes.get(j), memory);
+          arguments[argumentIndex] = expressionResult;
+          argumentIndex++;
+        }
+
+        try {
+          return method.run(arguments, memory);
+        } catch (InvalidArgumentException | IncorrectReturnTypeException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      case "scope" -> {
         List<Node> statements = new ArrayList<>(child.getChildren());
         statements.removeFirst();
         statements.removeLast();
         // Now statement is just a list of statements
         return scope(statements, memory);
-
-      case "operation":
+      }
+      case "operation" -> {
         Node operation = child.getChild(0).get();
         Node left = operation.getChild(0).get();
         Node operator = operation.getChild(1).get();
@@ -296,74 +348,55 @@ public class Interpreter {
         Variable rightValue = computeExpression(right, memory);
 
         if (leftValue instanceof VNumber && rightValue instanceof VNumber) {
-          double leftNum = ((VNumber) leftValue).value;
-          double rightNum = ((VNumber) rightValue).value;
+          double leftNum = ((VNumber) leftValue).value();
+          double rightNum = ((VNumber) rightValue).value();
 
-          switch (operation.getType()) {
-            case "addition":
-              return new VNumber(leftNum + rightNum);
-
-            case "subtraction":
-              return new VNumber(leftNum - rightNum);
-
-            case "multiplication":
-              return new VNumber(leftNum * rightNum);
-
-            case "division":
+          return switch (operation.getType()) {
+            case "addition" -> new VNumber(leftNum + rightNum);
+            case "subtraction" -> new VNumber(leftNum - rightNum);
+            case "multiplication" -> new VNumber(leftNum * rightNum);
+            case "division" -> {
               if (rightNum == 0) {
                 throw new RuntimeException("Division by zero");
               }
-              return new VNumber(leftNum / rightNum);
-            case "less_than":
-              return new VBoolean(leftNum < rightNum);
-            case "less_than_or_equal_to":
-              return new VBoolean(leftNum <= rightNum);
-            case "greater_than":
-              return new VBoolean(leftNum > rightNum);
-            case "greater_than_or_equal_to":
-              return new VBoolean(leftNum >= rightNum);
-            case "equal_to":
-              return new VBoolean(leftNum == rightNum);
-            case "not_equal_to":
-              return new VBoolean(leftNum != rightNum);
-
-            default:
-              throw new RuntimeException("Unknown operation: " + operator.getType());
-          }
-        } else if (leftValue instanceof VString) {
-          VString leftValueString = (VString) leftValue;
-          if (rightValue instanceof VString) {
-            switch (operation.getType()) {
-              case "addition" -> {
-                return new VString(leftValueString.value + ((VString) rightValue).value);
-              }
-
-              case "equal_to" -> {
-                return new VBoolean(leftValueString.value.equals(((VString) rightValue).value));
-              }
-
-              case "not_equal_to" -> {
-                return new VBoolean(!leftValueString.value.equals(((VString) rightValue).value));
-              }
-
-              default -> {
-                throw new RuntimeException("Unknown operation: " + operator.getType());
-              }
+              yield new VNumber(leftNum / rightNum);
             }
-          } else if (rightValue instanceof VNumber) {
-            switch (operation.getType()) {
-              case "addition" -> {
-                return new VString(leftValueString.value + ((VNumber) rightValue).value);
-              }
-
-              default -> {
-              }
+            case "less_than" -> new VBoolean(leftNum < rightNum);
+            case "less_than_or_equal_to" -> new VBoolean(leftNum <= rightNum);
+            case "greater_than" -> new VBoolean(leftNum > rightNum);
+            case "greater_than_or_equal_to" -> new VBoolean(leftNum >= rightNum);
+            case "equal_to" -> new VBoolean(leftNum == rightNum);
+            case "not_equal_to" -> new VBoolean(leftNum != rightNum);
+            default -> throw new RuntimeException("Unknown operation: " + operator.getType());
+          };
+        } else if (leftValue instanceof VString(String value)) {
+          if (rightValue instanceof VString) {
+            return switch (operation.getType()) {
+              case "addition" -> new VString(value + ((VString) rightValue).value());
+              case "equal_to" -> new VBoolean(value.equals(((VString) rightValue).value()));
+              case "not_equal_to" -> new VBoolean(!value.equals(((VString) rightValue).value()));
+              default -> throw new RuntimeException("Unknown operation: " + operator.getType());
+            };
+          } else if (rightValue instanceof VNumber(double doubleValue)) {
+            if (operation.getType().equals("addition")) {
+              return new VString(value + doubleValue);
+            }
+          } else if (rightValue instanceof VBoolean(boolean booleanValue)) {
+            if (operation.getType().equals("addition")) {
+              return new VString(value + booleanValue);
+            }
+          } else if (rightValue instanceof VArray arrayValue) {
+            if (operation.getType().equals("addition")) {
+              return new VString(value + arrayValue.display());
             }
           }
         } else {
           throw new RuntimeException("Operands must be numbers" + leftValue + rightValue);
         }
+      }
     }
-    return new VNumber(10);
+    // When this number appears in code, you know something's gone wrong with
+    // variables
+    return new VNumber(1337);
   }
 }

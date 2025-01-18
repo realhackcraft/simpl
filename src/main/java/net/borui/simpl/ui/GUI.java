@@ -3,17 +3,15 @@ package net.borui.simpl.ui;
 import io.github.treesitter.jtreesitter.Language;
 import io.github.treesitter.jtreesitter.Parser;
 import io.github.treesitter.jtreesitter.Tree;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FileDialog;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import net.borui.simpl.exceptions.InvalidVariableException;
+import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
+import net.borui.simpl.exceptions.UnexpectedValueException;
+import net.borui.simpl.exceptions.VariableNotFound;
+import net.borui.simpl.interpreter.Interpreter;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.*;
 import java.lang.foreign.Arena;
 import java.lang.foreign.SymbolLookup;
 import java.net.URISyntaxException;
@@ -24,23 +22,10 @@ import java.nio.file.Paths;
 import java.util.Scanner;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import javax.swing.JButton;
-import javax.swing.JEditorPane;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import net.borui.simpl.exceptions.InvalidVariableException;
-import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
-import net.borui.simpl.exceptions.UnexpectedValueException;
-import net.borui.simpl.exceptions.VariableNotFound;
-import net.borui.simpl.interpreter.Interpreter;
 
 public class GUI extends JFrame {
-  public JEditorPane codeArea = new JEditorPane();
-  public JTextArea output = new JTextArea();
+  public final JEditorPane codeArea = new JEditorPane();
+  public final JTextArea output = new JTextArea();
 
   static GUI instance;
   public Parser parser;
@@ -70,8 +55,7 @@ public class GUI extends JFrame {
       Language language = Language.load(symbols, "tree_sitter_simpl");
       parser = new Parser(language);
     } catch (IOException e) {
-      e.printStackTrace();
-      System.exit(-1);
+      throw new RuntimeException(e);
     }
 
     this.setLayout(new BorderLayout());
@@ -140,19 +124,19 @@ public class GUI extends JFrame {
     File file = new File(dialog.getDirectory(), dialog.getFile());
     dialog.dispose();
 
-    String program = "";
+    StringBuilder program = new StringBuilder();
     try {
       Scanner myReader = new Scanner(file);
       while (myReader.hasNextLine()) {
         String data = myReader.nextLine();
-        program += data + "\n";
+        program.append(data).append("\n");
       }
       myReader.close();
     } catch (FileNotFoundException e) {
       System.err.println("Unable to read program.");
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
-    codeArea.setText(program);
+    codeArea.setText(program.toString());
   }
 
   // Partially taken from
@@ -169,7 +153,7 @@ public class GUI extends JFrame {
       fWriter.write(codeArea.getText());
       fWriter.close();
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
@@ -180,9 +164,11 @@ public class GUI extends JFrame {
     };
     int n = JOptionPane.showOptionDialog(
         this,
-        "Are you sure you want to uninstall simpl?\n"
-            + "This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM. \n"
-            + " The libraries will be reinstalled the next time you open SIMPLIDE.",
+        """
+            Are you sure you want to uninstall simpl?
+            This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM.\s
+             The libraries will be reinstalled the next time you open SIMPLIDE.\
+            """,
         "Uninstall Simpl",
         JOptionPane.YES_NO_OPTION,
         JOptionPane.QUESTION_MESSAGE,
@@ -196,7 +182,7 @@ public class GUI extends JFrame {
       try {
         Files.delete(libTreeSitterPath);
       } catch (IOException e) {
-        e.printStackTrace();
+        throw new RuntimeException(e);
       }
       deleteDir(tempDir.toFile());
       System.exit(0);
@@ -224,10 +210,10 @@ public class GUI extends JFrame {
       try {
         Interpreter.getInstance().scope(tree.getRootNode().getChildren());
       } catch (UnexpectedNodeTypeException
-          | InvalidVariableException
-          | UnexpectedValueException
-          | VariableNotFound e) {
-        e.printStackTrace();
+               | InvalidVariableException
+               | UnexpectedValueException
+               | VariableNotFound e) {
+        throw new RuntimeException(e);
       }
     }
   }
@@ -240,38 +226,39 @@ public class GUI extends JFrame {
    * @param libName the path of the library inside the jar
    * @param tempDir the path to store the libraries
    * @return the path to the extracted library
-   * @throws IOException
+   * @throws IOException cannot find the library
    */
   private static Path extractNativeLibrary(String libName, Path tempDir) throws IOException {
-    // Gets library from insude the jar, which is put there by the maven build
+    // Gets library from inside the jar, which is put there by the maven build
     // config
 
     Path libPath = tempDir.resolve(libName);
 
     if (!Files.exists(libPath)) {
       // Prepare streaming data from jar
-      InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(libName);
-      if (libStream == null) {
-        throw new FileNotFoundException("Library " + libName + " not found in jar.");
-      }
-
-      // Write binary library inside the jar to outside as it is streamed in
-      try (OutputStream out = Files.newOutputStream(libPath)) {
-        byte[] buffer = new byte[8192];
-        int bytesRead;
-        while ((bytesRead = libStream.read(buffer)) != -1) {
-          out.write(buffer, 0, bytesRead);
+      try (InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(libName)) {
+        if (libStream == null) {
+          throw new FileNotFoundException("Library " + libName + " not found in jar.");
         }
-      }
 
-      // Allow execution
-      libPath.toFile().setExecutable(true);
+        // Write binary library inside the jar to outside as it is streamed in
+        try (OutputStream out = Files.newOutputStream(libPath)) {
+          byte[] buffer = new byte[8192];
+          int bytesRead;
+          while ((bytesRead = libStream.read(buffer)) != -1) {
+            out.write(buffer, 0, bytesRead);
+          }
+        }
+
+        // Allow execution
+        libPath.toFile().setExecutable(true);
+      }
     }
 
     return libPath;
   }
 
-  private static Path extractLibTreeSitter(Path tempDir) throws IOException {
+  private static void extractLibTreeSitter(Path tempDir) throws IOException {
     // Unable to load libtree-sitter at arbitrary path. It must only be loaded
     // at $CWD
 
@@ -296,7 +283,8 @@ public class GUI extends JFrame {
             }
           } else {
             // Lib is in current dir
-            return extractLibTreeSitterInternal();
+            extractLibTreeSitterInternal();
+            return;
           }
         }
         // Lib in store file doesn't exist. Do normal process
@@ -304,16 +292,13 @@ public class GUI extends JFrame {
     }
     // Store file doesn't exist. Do normal process
 
-    Path libPath = extractLibTreeSitterInternal();
-
     try (BufferedWriter bw = Files.newBufferedWriter(oldLibStore)) {
       bw.write(System.getProperty("user.dir"));
     }
 
-    return libPath;
   }
 
-  private static Path extractLibTreeSitterInternal() throws IOException {
+  private static Path extractLibTreeSitterInternal() {
     // Gets library from inside the jar, which is put there by the maven build
     // config
     String libName = System.mapLibraryName("tree-sitter");
@@ -346,11 +331,11 @@ public class GUI extends JFrame {
           // Allow execution
           libPath.toFile().setExecutable(true);
         } catch (IOException e) {
-          e.printStackTrace();
+          throw new RuntimeException(e);
         }
 
       } catch (URISyntaxException e) {
-        e.printStackTrace();
+        throw new RuntimeException(e);
       }
     }
 
@@ -373,8 +358,8 @@ public class GUI extends JFrame {
       throw new IllegalArgumentException("File not found: " + filePath);
     }
 
-    System.out.println(isSymlink(jarFile, entry));
-    if (!isSymlink(jarFile, entry))
+    System.out.println(isSymlink(entry));
+    if (!isSymlink(entry))
       return jarFile.getInputStream(entry);
     JarEntry targetEntry;
     // Read the symlink content
@@ -396,12 +381,10 @@ public class GUI extends JFrame {
    * significantly shorter
    * lengths compared to actual files
    *
-   * @param jarFile   The JAR file.
-   * @param entryPath The path of the entry inside the JAR.
+   * @param entry The JarEntry to check for symlink.
    * @return true if the file is a symlink, false otherwise.
-   * @throws Exception if an error occurs while reading the entry.
    */
-  public static boolean isSymlink(JarFile jarFile, JarEntry entry) {
+  public static boolean isSymlink(JarEntry entry) {
     // Heuristic: Check the file size
     long length = entry.getSize();
 

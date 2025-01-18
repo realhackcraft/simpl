@@ -1,7 +1,8 @@
 package net.borui.simpl.ui;
 
-import javax.swing.JTextArea;
 import net.borui.simpl.interpreter.ProgramOutput;
+
+import javax.swing.*;
 
 public class GUIOut extends ProgramOutput {
   @Override
@@ -14,8 +15,7 @@ public class GUIOut extends ProgramOutput {
 
   @Override
   public ProgramOutput getInstance() {
-    if (instance == null)
-      instance = new GUIOut();
+    if (instance == null) instance = new GUIOut();
     return instance;
   }
 }

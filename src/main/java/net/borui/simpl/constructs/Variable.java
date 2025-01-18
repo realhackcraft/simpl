@@ -1,5 +1,7 @@
 package net.borui.simpl.constructs;
 
 public interface Variable {
-  public String display();
+  String display();
+
+  VFunction getMethod(String identifier);
 }

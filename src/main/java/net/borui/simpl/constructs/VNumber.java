@@ -1,11 +1,6 @@
 package net.borui.simpl.constructs;
 
-public class VNumber implements Variable {
-  public double value = 0;
-
-  public VNumber(double value) {
-    this.value = value;
-  }
+public record VNumber(double value) implements Variable {
 
   @Override
   public String toString() {
@@ -15,5 +10,10 @@ public class VNumber implements Variable {
   @Override
   public String display() {
     return value + "";
+  }
+
+  @Override
+  public VFunction getMethod(String identifier) {
+    return null;
   }
 }
