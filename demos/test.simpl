@@ -31,7 +31,7 @@ print computed_age;
  print "Expected: false";
 print 2.0 == 2.1;
 
-if (age > computed_age) {
+if (age < computed_age) {
  print "THIS SHOULDN'T BE RUN";
  print age;
 }
@@ -55,7 +55,7 @@ print "Actual: ";
 let i = 0;
 while (i < 5) {
   print i;
-  let i = i + 1;
+  i = i + 1;
 }
 
 print "Expected: HelloWorld";

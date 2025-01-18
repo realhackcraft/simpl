@@ -33,17 +33,28 @@ public class ScopedMemory {
     return returnValue;
   }
 
-  public void set(String name, Variable value) {
-    // if var in current: put in current scope.
-    // If no var in current scope and no var in parent scope: put var in current
-    // scope.
-    // Else if var in parent scope but not current scope: set in parent scope
-    if (currentScope.containsKey(name) || (parentScope == null || !parentScope.containsKey(name))) {
+  public void define(String name, Variable value) {
+    // if var not in current scope: put in current scope
+    if (!currentScope.containsKey(name)) {
       currentScope.put(name, value);
     } else {
-      parentScope.set(name, value);
+      parentScope.define(name, value);
     }
   }
+
+  public void assign(String name, Variable value) throws VariableNotFound {
+    // if var in current: put in current scope.
+    // If no var in current scope and no var in parent scope: %@&^@^%&^@!
+    // Else if var in parent scope but not current scope: assign in parent scope
+    if (currentScope.containsKey(name)) {
+      currentScope.put(name, value);
+    } else if (parentScope.containsKey(name)) {
+      parentScope.assign(name, value);
+    } else {
+      throw new VariableNotFound(name);
+    }
+  }
+
 
   public boolean containsKey(String name) {
     return currentScope.containsKey(name) || (parentScope != null && parentScope.containsKey(name));

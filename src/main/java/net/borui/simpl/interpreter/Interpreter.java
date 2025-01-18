@@ -31,10 +31,6 @@ public class Interpreter {
   private Interpreter() {
   }
 
-  private static class InterpreterSingletonFactory {
-    private static final Interpreter INSTANCE = new Interpreter();
-  }
-
   public static Interpreter getInstance() {
     return InterpreterSingletonFactory.INSTANCE;
   }
@@ -55,7 +51,17 @@ public class Interpreter {
           Node value = statement.getChild(3).get();
           try {
             Variable computedExpression = computeExpression(value, map);
-            map.set(identifier, computedExpression);
+            map.define(identifier, computedExpression);
+          } catch (UnexpectedNodeTypeException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        case "assign_statement" -> {
+          String identifier = statement.getChild(0).get().getText();
+          Node value = statement.getChild(2).get();
+          try {
+            Variable computedExpression = computeExpression(value, map);
+            map.assign(identifier, computedExpression);
           } catch (UnexpectedNodeTypeException e) {
             throw new RuntimeException(e);
           }
@@ -126,7 +132,7 @@ public class Interpreter {
           scope.removeFirst();
           scope.removeLast();
           VFunction vFunction = new VFunction(scope, parameters, returnType);
-          map.set(fnName, vFunction);
+          map.define(fnName, vFunction);
         }
         case "if_statement" -> {
           Variable expression = computeExpression(statement.getChild(2).get(), map);
@@ -318,7 +324,9 @@ public class Interpreter {
         arguments[0] = variable;
         int argumentIndex = 1;
 
-        // Method_call_statement requires -1 for ")" and -1 for ";", but because the ";" doesn't exist here, it is only -1.
+        // Method_call_statement requires -1 for ")" and -1 for ";", but because the ";"
+        // doesn't
+        // exist here, it is only -1.
         for (int j = 2; j < argumentNodes.size() - 1; j += 2) {
           Variable expressionResult = computeExpression(argumentNodes.get(j), memory);
           arguments[argumentIndex] = expressionResult;
@@ -398,5 +406,9 @@ public class Interpreter {
     // When this number appears in code, you know something's gone wrong with
     // variables
     return new VNumber(1337);
+  }
+
+  private static class InterpreterSingletonFactory {
+    private static final Interpreter INSTANCE = new Interpreter();
   }
 }

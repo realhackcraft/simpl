@@ -96,8 +96,11 @@
   CWD (current working directory, aka where the jar file is being executed, such
   as the projects folder or where the user double-clicked it)
 - 2025-01-17:
-  Added uninstall button to remove libraries.
+  Added uninstallation button to remove libraries.
 - 2025-01-18:
   Account for when libtree-sitter Is stored in the jar as a symlink.
 - 2025-01-18:
-  Added arrays.
+  Created arrays, methods, and allowed functions to return stuff for real.
+- 2025-01-18:
+  Implemented assignment to finally fix janky way of modifying variables (was
+  `let a = 1; let a = 2;` to reassign variable, now `let a = 1; a = 2`)

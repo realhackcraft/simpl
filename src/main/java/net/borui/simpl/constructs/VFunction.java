@@ -9,9 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 public class VFunction implements Variable {
-  private final List<Node> scope;
   public final LinkedHashMap<String, Class<? extends Variable>> parameters;
   public final Class<? extends Variable> returnType;
+  private final List<Node> scope;
 
   public VFunction(List<Node> scope, LinkedHashMap<String, Class<? extends Variable>> parameters, Class<? extends Variable> returnType) {
     this.scope = scope;
@@ -39,7 +39,7 @@ public class VFunction implements Variable {
     int index = 0;
     ScopedMemory newMemory = new ScopedMemory(memory);
     for (String key : parameters.keySet()) {
-      newMemory.set(key, arguments[index]);
+      newMemory.define(key, arguments[index]);
       index++;
     }
     return newMemory;
