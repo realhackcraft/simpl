@@ -16,10 +16,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.foreign.Arena;
 import java.lang.foreign.SymbolLookup;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Scanner;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
@@ -44,7 +48,8 @@ public class GUI extends JFrame {
   public Path tempDir;
 
   public static GUI getInstance() {
-    if (instance == null) instance = new GUI();
+    if (instance == null)
+      instance = new GUI();
 
     return instance;
   }
@@ -62,8 +67,7 @@ public class GUI extends JFrame {
 
       extractLibTreeSitter(tempDir);
 
-      SymbolLookup symbols =
-          SymbolLookup.libraryLookup(extractNativeLibrary("simpl.dylib", tempDir), arena);
+      SymbolLookup symbols = SymbolLookup.libraryLookup(extractNativeLibrary("simpl.dylib", tempDir), arena);
       Language language = Language.load(symbols, "tree_sitter_simpl");
       parser = new Parser(language);
     } catch (IOException e) {
@@ -173,22 +177,28 @@ public class GUI extends JFrame {
   public void uninstallButtonClicked() {
     // https://docs.oracle.com/javase/tutorial/uiswing/components/dialog.html
     Object[] options = {
-      "Yes", "No",
+        "Yes", "No",
     };
-    int n =
-        JOptionPane.showOptionDialog(
-            this,
-            "Are you sure you want to uninstall simpl?\n"
-                + "This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM. \n"
-                + " The libraries will be reinstalled the next time you open SIMPLIDE.",
-            "Uninstall Simpl",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            options,
-            options[1]);
+    int n = JOptionPane.showOptionDialog(
+        this,
+        "Are you sure you want to uninstall simpl?\n"
+            + "This will IMMEDIATELY remove supporting libraries and EXIT THE PROGRAM. \n"
+            + " The libraries will be reinstalled the next time you open SIMPLIDE.",
+        "Uninstall Simpl",
+        JOptionPane.YES_NO_OPTION,
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        options,
+        options[1]);
     // Accepted
     if (n == 0) {
+      // Find current libtree-sitter location and delete it
+      Path libTreeSitterPath = Path.of(System.getProperty("user.dir")).resolve(System.mapLibraryName("tree-sitter"));
+      try {
+        Files.delete(libTreeSitterPath);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
       deleteDir(tempDir.toFile());
       System.exit(0);
     }
@@ -224,7 +234,8 @@ public class GUI extends JFrame {
   }
 
   /**
-   * Extracts the resourcePath from within the jar file and puts it in tempDir. Will reuse library
+   * Extracts the resourcePath from within the jar file and puts it in tempDir.
+   * Will reuse library
    * if already exists in tempDir.
    *
    * @param libName the path of the library inside the jar
@@ -279,7 +290,11 @@ public class GUI extends JFrame {
         if (oldLibStore.toFile().exists()) {
           // Lib isn't in current dir
           if (!oldLibPath.equals(Path.of(System.getProperty("user.dir")))) {
-            Files.delete(oldLibPath);
+            try {
+              Files.delete(oldLibPath.resolve(System.mapLibraryName("tree-sitter")));
+            } catch (NoSuchFileException e) {
+              System.err.println("old libtree-sitter already deleted");
+            }
           } else {
             // Lib is in current dir
             return extractLibTreeSitterInternal();
@@ -302,30 +317,100 @@ public class GUI extends JFrame {
   private static Path extractLibTreeSitterInternal() throws IOException {
     // Gets library from inside the jar, which is put there by the maven build
     // config
-    String libName = "libtree-sitter.dylib";
+    String libName = System.mapLibraryName("tree-sitter");
 
     // CWD
-    Path libPath = Path.of(System.getProperty("user.dir")).resolve(libName);
+    Path libPath = Path.of(System.getProperty("user.dir")).resolve(libName).toAbsolutePath();
 
     if (!Files.exists(libPath)) {
+
       // Prepare streaming data from jar
-      InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(libName);
-      if (libStream == null) {
-        throw new FileNotFoundException("Library " + libName + " not found in jar.");
-      }
+      // https://stackoverflow.com/questions/320542/how-to-get-the-path-of-a-running-jar-file
+      try {
+        String jarPath = new File(GUI.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+            .getPath();
+        try (JarFile jarFile = new JarFile(jarPath)) {
+          InputStream libStream = resolveSymlinkIfExists(libName, jarFile);
+          if (libStream == null) {
+            throw new FileNotFoundException("Library " + libName + " not found in jar.");
+          }
 
-      // Write binary library inside the jar to outside as it is streamed in
-      try (OutputStream out = Files.newOutputStream(libPath)) {
-        byte[] buffer = new byte[8192];
-        int bytesRead;
-        while ((bytesRead = libStream.read(buffer)) != -1) {
-          out.write(buffer, 0, bytesRead);
+          // Write binary library inside the jar to outside as it is streamed in
+          try (OutputStream out = Files.newOutputStream(libPath)) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = libStream.read(buffer)) != -1) {
+              out.write(buffer, 0, bytesRead);
+            }
+          }
+
+          // Allow execution
+          libPath.toFile().setExecutable(true);
+        } catch (IOException e) {
+          e.printStackTrace();
         }
-      }
 
-      // Allow execution
-      libPath.toFile().setExecutable(true);
+      } catch (URISyntaxException e) {
+        e.printStackTrace();
+      }
     }
+
     return libPath;
+  }
+
+  /**
+   * Resolves the given path in the jar and account for symlink
+   *
+   * <p>
+   * Code calling this MUST be in a jar file.
+   *
+   * @param filePath the name of the potential symlink
+   * @return the InputStream of the file
+   */
+  private static InputStream resolveSymlinkIfExists(String filePath, JarFile jarFile)
+      throws IOException {
+    JarEntry entry = jarFile.getJarEntry(filePath);
+    if (entry == null) {
+      throw new IllegalArgumentException("File not found: " + filePath);
+    }
+
+    System.out.println(isSymlink(jarFile, entry));
+    if (!isSymlink(jarFile, entry))
+      return jarFile.getInputStream(entry);
+    JarEntry targetEntry;
+    // Read the symlink content
+    try (InputStream symlinkStream = jarFile.getInputStream(entry)) {
+      String targetPath = new String(symlinkStream.readAllBytes()).trim();
+
+      // Resolve the real file
+      targetEntry = jarFile.getJarEntry(targetPath);
+      if (targetEntry == null) {
+        throw new IllegalArgumentException("Target file not found: " + targetPath);
+      }
+    }
+    // Return an InputStream for the real file
+    return jarFile.getInputStream(targetEntry);
+  }
+
+  /**
+   * Checks if the file is a symlink based on its length Assumes symlinks have
+   * significantly shorter
+   * lengths compared to actual files
+   *
+   * @param jarFile   The JAR file.
+   * @param entryPath The path of the entry inside the JAR.
+   * @return true if the file is a symlink, false otherwise.
+   * @throws Exception if an error occurs while reading the entry.
+   */
+  public static boolean isSymlink(JarFile jarFile, JarEntry entry) {
+    // Heuristic: Check the file size
+    long length = entry.getSize();
+
+    // Symlinks typically have smaller lengths (e.g., 0 or a few bytes) compared to
+    // actual files
+    // Adjust the threshold based on your JAR structure
+    return length > 0
+        && length < 1023; // Assuming symlinks are smaller than 1023 bytes as that is the max path length
+    // across all systems.
   }
 }
