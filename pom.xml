@@ -51,5 +51,19 @@
         </executions>
       </plugin>
     </plugins>
+    <resources>
+      <resource>
+        <directory>tree-sitter</directory>
+        <includes>
+          <include>*.dylib</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>tree-sitter-simpl</directory>
+        <includes>
+          <include>*.dylib</include>
+        </includes>
+      </resource>
+    </resources>
   </build>
 </project>

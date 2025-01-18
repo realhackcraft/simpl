@@ -10,8 +10,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.foreign.Arena;
 import java.lang.foreign.SymbolLookup;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Scanner;
 import javax.swing.JButton;
@@ -34,6 +37,7 @@ public class GUI extends JFrame {
 
   static GUI instance;
   public Parser parser;
+  public Path tempDir;
 
   public static GUI getInstance() {
     if (instance == null) instance = new GUI();
@@ -43,11 +47,27 @@ public class GUI extends JFrame {
   private GUI() {
     // Initialize cached parser
     Arena arena = Arena.global();
-    SymbolLookup symbols =
-        SymbolLookup.libraryLookup(Path.of("./tree-sitter-simpl/simpl.dylib"), arena);
-    Language language = Language.load(symbols, "tree_sitter_simpl");
+    try {
+      tempDir = Files.createTempDirectory("native-lib");
+      // Do not allow temporary files to live after program termination
+      tempDir.toFile().deleteOnExit();
 
-    parser = new Parser(language);
+      // Allow java-tree-sitter library to discover native binary required
+      // without hard-coding path
+      System.setProperty(
+          "java.library.path",
+          System.getProperty("java.library.path") + ":" + tempDir.toAbsolutePath());
+
+      extractNativeLibrary("libtree-sitter.dylib", tempDir);
+
+      SymbolLookup symbols =
+          SymbolLookup.libraryLookup(extractNativeLibrary("simpl.dylib", tempDir), arena);
+      Language language = Language.load(symbols, "tree_sitter_simpl");
+      parser = new Parser(language);
+    } catch (IOException e) {
+      e.printStackTrace();
+      System.exit(-1);
+    }
 
     this.setLayout(new BorderLayout());
     this.setTitle("Simpl IDE (SIMPLIDE)");
@@ -144,6 +164,11 @@ public class GUI extends JFrame {
     }
   }
 
+  /**
+   * Runs a give piece of simpl source code
+   *
+   * @param code the code to execute
+   */
   public void run(String code) {
     try (Tree tree = parser.parse(code).get()) {
       try {
@@ -155,5 +180,33 @@ public class GUI extends JFrame {
         e.printStackTrace();
       }
     }
+  }
+
+  /**
+   * @param resourcePath the path of the resource inside the jar
+   * @return the path to the extracted library
+   * @throws IOException
+   */
+  private static Path extractNativeLibrary(String resourcePath, Path tempDir) throws IOException {
+    // Gets library from insude the jar, which is put there by the maven build
+    // config
+    InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(resourcePath);
+    if (libStream == null) {
+      throw new FileNotFoundException("Library " + resourcePath + " not found in jar.");
+    }
+
+    Path tempLibFile = tempDir.resolve(resourcePath);
+
+    // Write binary library inside the jar to outside
+    try (OutputStream out = Files.newOutputStream(tempLibFile)) {
+      byte[] buffer = new byte[8192];
+      int bytesRead;
+      while ((bytesRead = libStream.read(buffer)) != -1) {
+        out.write(buffer, 0, bytesRead);
+      }
+    }
+
+    tempLibFile.toFile().setExecutable(true);
+    return tempLibFile;
   }
 }
