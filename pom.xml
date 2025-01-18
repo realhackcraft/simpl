@@ -56,12 +56,24 @@
         <directory>tree-sitter</directory>
         <includes>
           <include>*.dylib</include>
+          <include>*.so</include>
+          <include>*.dll</include>
         </includes>
       </resource>
       <resource>
         <directory>tree-sitter-simpl</directory>
         <includes>
           <include>*.dylib</include>
+          <include>*.so</include>
+          <include>*.dll</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>tree-sitter/build/shared</directory>
+        <includes>
+          <include>*.dylib</include>
+          <include>*.so</include>
+          <include>*.dll</include>
         </includes>
       </resource>
     </resources>

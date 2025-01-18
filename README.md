@@ -4,9 +4,7 @@
 
 ### macOS and Linux
 
-1. `cd` into `tree-sitter/` and run `make -j`
-2. Copy the generated file (`libtree-sitter.so` on Linux and
-   `libtree-sitter.dylib` on Mac) to the project root
+1. `cd` into `tree-sitter/` and run `make -j` to create the shared library
 
 ### Windows
 
@@ -26,9 +24,8 @@
     cmake --build build/shared --verbose
    ```
 
-2. Copy the generated `.dll` file (in `tree-sitter/build/static`) to the project
-   root
-3. rename it without the versions, i.e. `libtree-sitter.dll`
+2. The file is in build/share.
+   Rename it without the versions, e.g. `libtree-sitter.dll`.
 
 > [!NOTE]
 > Now, you should have a shared library in the root, under the name of
@@ -48,7 +45,9 @@
    tree-sitter generate
    tree-sitter build
    ```
-   To build the grammar.
+   To generate and build the grammar.
+   This will output another shared library, and should have the same extension
+   as `libtree-sitter`.
 
 > [!NOTE]
 > While `libtree-sitter` parses the file into tokens, it doesn't know how to,
@@ -67,14 +66,12 @@
 > creates the syntax tree, while the grammar defines the rules for a specific
 > language.
 
-3. The generated file should be `simpl.*`, with the extension being the same as
-   the one on `libtree-sitter`.
-   Since the Java program only looks for a `simpl.dylib` library in
-   `tree-sitter-simpl/`, you can rename the file extension to `.dylib`.
-   If that doesn't work, you can go into
-   `src/main/java/net/borui/simpl/Main.java`, search for
-   `./tree-sitter-simpl/simpl.dylib`, and change that to .(what ever the
-   extension may be on your grammar library)
+3.  Since the Java program only looks for `simpl.dylib`, you can rename the file
+    extension to `.dylib`.
+    If that doesn't work, you can go into
+    `src/main/java/net/borui/simpl/Main.java`, search for
+    `./tree-sitter-simpl/simpl.dylib`, and change that to the same extension as
+    on `libtree-sitter`.
 
 ## Compiling the Interpreter
 
@@ -82,9 +79,6 @@
 2. There are two ways to proceed:
    - Run `./test.sh`
    - Or this two-step process:
-     1. Run `maven package`
+     1. Run `maven package` once to compile
      2. Run `java -cp target/simpl-1.0-SNAPSHOT-jar-with-dependencies.jar
---enable-native-access=ALL-UNNAMED net.borui.simpl.Main
-./tree-sitter-simpl/test.simpl`.
-        Alternatively replace `./tree-sitter-simpl/test.simpl` with your own
-        program
+--enable-native-access=ALL-UNNAMED net.borui.simpl.Main`.
