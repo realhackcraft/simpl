@@ -7,9 +7,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
-// TODO: implement
+/**
+ * An array variable in simpl.
+ * It can represent an array of any type of elements, even mixed.
+ */
 public class VArray implements Variable {
+  /**
+   * the inner storage of the array.
+   */
   public ArrayList<Variable> value;
+  /**
+   * the methods which the array has.
+   */
   private static final HashMap<String, VBuiltInFunction> methods = new HashMap<>();
 
   static {
@@ -104,15 +113,32 @@ public class VArray implements Variable {
     }));
   }
 
+  /**
+   * Creates a new VArray from the given initial array.
+   *
+   * @param value the initial array.
+   */
   public VArray(ArrayList<Variable> value) {
     this.value = value;
   }
 
+  /**
+   * Gives a String representation of the array.
+   * Should only be used when debugging.
+   *
+   * @return a String representation of the array specifying the data type.
+   * @see #display()
+   */
   @Override
   public String toString() {
     return "VArray{" + value + "}";
   }
 
+  /**
+   * Gives a String representation of the array as should be outputted to the user when printing the variable.
+   *
+   * @return a String representation of the array meant for displaying to the user.
+   */
   @Override
   public String display() {
     StringBuilder result = new StringBuilder("[");
@@ -123,6 +149,12 @@ public class VArray implements Variable {
     return result + "]";
   }
 
+  /**
+   * Gets the methods present in this variable type.
+   *
+   * @param identifier the name of the method.
+   * @return the method function requested.
+   */
   @Override
   public VFunction getMethod(String identifier) {
     return VArray.methods.get(identifier);

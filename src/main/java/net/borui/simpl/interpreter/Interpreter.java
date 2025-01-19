@@ -7,10 +7,22 @@ import net.borui.simpl.exceptions.*;
 
 import java.util.*;
 
+/**
+ * The interpreter for the simpl programming language.
+ */
 public class Interpreter {
+  /**
+   * A hashmap from a String to its corresponding type of variable.
+   */
   public static final Map<String, Class<? extends Variable>> typeMap = new HashMap<>();
+  /**
+   * A hashmap from a type of variable to its corresponding String representation.
+   */
   public static final Map<Class<? extends Variable>, String> reverseTypeMap = new HashMap<>();
 
+  /**
+   * The method of output for the program.
+   */
   public static ProgramOutput output = new SystemOut();
 
   static {
@@ -33,16 +45,38 @@ public class Interpreter {
   private Interpreter() {
   }
 
+  /**
+   * Gets an instance of the interpreter. Creates a new one if it doesn't exist.
+   *
+   * @return the instance of the interpreter.
+   */
   public static Interpreter getInstance() {
     return InterpreterSingletonFactory.INSTANCE;
   }
 
-  public void scope(List<Node> nodes) throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException, VariableNotFound {
+  /**
+   * Creates and execute a scope from a list of tree-sitter nodes.
+   *
+   * @param nodes the notes that are part of the scope.
+   * @throws UnexpectedNodeTypeException when encountering a type of tree-sitter node which cannot be understood by the interpreter.
+   * @throws UnexpectedValueException    when a value of a variable is not understandable by the interpreter.
+   * @throws VariableNotFound            when a variable doesn't exist.
+   */
+  public void scope(List<Node> nodes) throws UnexpectedNodeTypeException, UnexpectedValueException, VariableNotFound {
     ScopedMemory memory = new ScopedMemory();
     scope(nodes, memory);
   }
 
-  public Variable scope(List<Node> nodes, ScopedMemory memory) throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException, VariableNotFound {
+  /**
+   * Creates and execute a scope from a list of tree-sitter nodes.
+   *
+   * @param nodes  the notes that are part of the scope.
+   * @param memory the memory which the scope can access.
+   * @throws UnexpectedNodeTypeException when encountering a type of tree-sitter node which cannot be understood by the interpreter.
+   * @throws UnexpectedValueException    when a value of a variable is not understandable by the interpreter.
+   * @throws VariableNotFound            when a variable doesn't exist.
+   */
+  public Variable scope(List<Node> nodes, ScopedMemory memory) throws UnexpectedNodeTypeException, UnexpectedValueException, VariableNotFound {
 
     ScopedMemory map = new ScopedMemory(memory);
     for (Node child : nodes) {
@@ -103,7 +137,7 @@ public class Interpreter {
           // Iterator variable needed outside of loop
           int i = 3;
           // First parameter
-          boolean skipParams = statement.getChild(i).get().getText().equals(")");
+          boolean skipParams = Objects.equals(statement.getChild(i).get().getText(), ")");
           if (!skipParams) {
             for (; !statement.getChild(i - 1).get().getType().equals(")"); i += 2) {
               if (!statement.getChild(i).get().getType().equals("typed_identifier")) {
@@ -153,7 +187,7 @@ public class Interpreter {
           // Look up the function with the function name
           String fn_name = statement.getChild(0).get().getText();
           Variable var = map.get(fn_name);
-          if (var == null) throw new InvalidVariableException(fn_name);
+          if (var == null) throw new VariableNotFound(fn_name);
           VFunction function = (VFunction) var;
 
           // Create a list of arguments (resolve all expressions first)
@@ -235,7 +269,17 @@ public class Interpreter {
     return new VUnit();
   }
 
-  public Variable computeExpression(Node node, ScopedMemory memory) throws UnexpectedNodeTypeException, InvalidVariableException, UnexpectedValueException, VariableNotFound {
+  /**
+   * Computes an expression based on the given tree-sitter node and the memory state.
+   *
+   * @param node   the note to evaluate the expression of.
+   * @param memory the memory to pull additional information from.
+   * @return a variable that is the result of the expression.
+   * @throws UnexpectedNodeTypeException when encountering a type of tree-sitter node which cannot be understood by the interpreter.
+   * @throws UnexpectedValueException    when a value of a variable is not understandable by the interpreter.
+   * @throws VariableNotFound            when a variable doesn't exist.
+   */
+  public Variable computeExpression(Node node, ScopedMemory memory) throws UnexpectedNodeTypeException, UnexpectedValueException, VariableNotFound {
     if (!node.getType().equals("expression")) throw new UnexpectedNodeTypeException("expression", node.getType());
 
     Node child = node.getChild(0).get();
@@ -278,7 +322,7 @@ public class Interpreter {
         // Look up the function with the function name
         String fn_name = child.getChild(0).get().getText();
         Variable var = memory.get(fn_name);
-        if (var == null) throw new InvalidVariableException(fn_name);
+        if (var == null) throw new VariableNotFound(fn_name);
         VFunction function = (VFunction) var;
 
         // Create a list of arguments (resolve all expressions first)
@@ -438,7 +482,13 @@ public class Interpreter {
     return new VNumber(1337);
   }
 
+  /**
+   * A Singleton factory to create and store a new interpreter on demand.
+   */
   private static class InterpreterSingletonFactory {
+    /**
+     * The single instance of the interpreter.
+     */
     private static final Interpreter INSTANCE = new Interpreter();
   }
 }

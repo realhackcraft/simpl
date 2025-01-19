@@ -1,4 +1,12 @@
-Sources:
+---
+title: "Progress Log"
+author: Borui Zhao
+date: January 18, 2025
+geometry: margin=2cm
+output: pdf_document
+---
+
+## Sources:
 
 1. https://stackoverflow.com/questions/215497/what-is-the-difference-between-public-protected-package-private-and-private-in
    Helped me understand how I could allow inheritance of methods while keeping them private.
@@ -24,7 +32,7 @@ Sources:
     it runs fast and uses less memory. It also simplifies the task of writing grammar for the language since it's
     well-thought-out as it is made by people working at GitHub.
 
-Daily log:
+## Daily log:
 
 - 2024-10-21:
   Came up with the idea of an interpreted multithreaded language with a simple

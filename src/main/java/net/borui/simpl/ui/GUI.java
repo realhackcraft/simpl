@@ -4,7 +4,6 @@ import com.formdev.flatlaf.FlatLightLaf;
 import io.github.treesitter.jtreesitter.Language;
 import io.github.treesitter.jtreesitter.Parser;
 import io.github.treesitter.jtreesitter.Tree;
-import net.borui.simpl.exceptions.InvalidVariableException;
 import net.borui.simpl.exceptions.UnexpectedNodeTypeException;
 import net.borui.simpl.exceptions.UnexpectedValueException;
 import net.borui.simpl.exceptions.VariableNotFound;
@@ -12,6 +11,7 @@ import net.borui.simpl.interpreter.Interpreter;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.io.*;
 import java.lang.foreign.Arena;
 import java.lang.foreign.SymbolLookup;
@@ -24,13 +24,39 @@ import java.util.Scanner;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+/**
+ * The GUI for SIMLIDE.
+ */
 public class GUI extends JFrame {
+
+  /**
+   * A Singleton instance of this GUI.
+   */
   static GUI instance;
+
+  /**
+   * The editor pane to write the simpl code.
+   */
   public final JEditorPane codeArea = new JEditorPane();
+
+  /**
+   * The taxer where the output of a simpl program is displayed.
+   */
   public final JTextArea output = new JTextArea();
+
+  /**
+   * The cache for the simpl parser.
+   */
   public Parser parser;
+
+  /**
+   * The path to the temporary directory where libraries are stored.
+   */
   public Path tempDir;
 
+  /**
+   * The constructor for the GUI.
+   */
   private GUI() {
     // Initialize cached parser
     Arena arena = Arena.global();
@@ -44,7 +70,7 @@ public class GUI extends JFrame {
 
       extractLibTreeSitter(tempDir);
 
-      SymbolLookup symbols = SymbolLookup.libraryLookup(extractNativeLibrary("simpl.dylib", tempDir), arena);
+      SymbolLookup symbols = SymbolLookup.libraryLookup(extractLanguageLibrary(tempDir), arena);
       Language language = Language.load(symbols, "tree_sitter_simpl");
       parser = new Parser(language);
     } catch (IOException e) {
@@ -68,10 +94,10 @@ public class GUI extends JFrame {
     JButton save = new JButton("Save");
     JButton uninstall = new JButton("Uninstall");
 
-    run.addActionListener(new RunButtonListener());
-    load.addActionListener(new LoadButtonListener());
-    save.addActionListener(new SaveButtonListener());
-    uninstall.addActionListener(new UninstallButtonListener());
+    run.addActionListener((ActionEvent _) -> runButtonClicked());
+    load.addActionListener((ActionEvent _) -> loadButtonClicked());
+    save.addActionListener((ActionEvent _) -> saveButtonClicked());
+    uninstall.addActionListener((ActionEvent _) -> uninstallButtonClicked());
 
     JScrollPane scroll = new JScrollPane(codeArea);
     scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -168,6 +194,11 @@ public class GUI extends JFrame {
     Interpreter.output = new GUIOut();
   }
 
+  /**
+   * Gets an instance of the GUI. Creates a new one if it doesn't exist.
+   *
+   * @return the instance of the GUI.
+   */
   public static GUI getInstance() {
     if (instance == null) instance = new GUI();
 
@@ -176,25 +207,25 @@ public class GUI extends JFrame {
 
   /**
    * Extracts the resourcePath from within the jar file and puts it in tempDir.
-   * Will reuse library
-   * if already exists in tempDir.
+   * Will reuse library if it already exists in tempDir.
    *
-   * @param libName the path of the library inside the jar
-   * @param tempDir the path to store the libraries
-   * @return the path to the extracted library
-   * @throws IOException cannot find the library
+   * @param tempDir the path to store the libraries.
+   * @return the path to the extracted library.
+   * @throws IOException cannot find the library.
    */
-  private static Path extractNativeLibrary(String libName, Path tempDir) throws IOException {
+  private static Path extractLanguageLibrary(Path tempDir) throws IOException {
     // Gets library from inside the jar, which is put there by the maven build
     // config
 
-    Path libPath = tempDir.resolve(libName);
+    String languageName = "simpl.dylib";
+
+    Path libPath = tempDir.resolve(languageName);
 
     if (!Files.exists(libPath)) {
       // Prepare streaming data from jar
-      try (InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(libName)) {
+      try (InputStream libStream = GUI.class.getClassLoader().getResourceAsStream(languageName)) {
         if (libStream == null) {
-          throw new FileNotFoundException("Library " + libName + " not found in jar.");
+          throw new FileNotFoundException("Library " + languageName + " not found in jar.");
         }
 
         // Write binary library inside the jar to outside as it is streamed in
@@ -214,11 +245,18 @@ public class GUI extends JFrame {
     return libPath;
   }
 
+  /**
+   * extract libtree-sitter from the JAR if it's not in $CWD.
+   * Writes to a temp file the location of the libtree-sitter, so that it can be removed if the $CWD changes.
+   *
+   * @param tempDir the path of the temporary directory.
+   * @throws IOException when unable to write to the temporary directory.
+   */
   private static void extractLibTreeSitter(Path tempDir) throws IOException {
     // Unable to load libtree-sitter at arbitrary path. It must only be loaded
     // at $CWD
 
-    // Remove old libtree-sitter if exists
+    // Remove old libtree-sitter if exists and not in $CWD
 
     // This is a file contenting a path to the last libtree-sitter location
     Path oldLibStore = tempDir.resolve("old-lib-store");
@@ -254,6 +292,9 @@ public class GUI extends JFrame {
 
   }
 
+  /**
+   * The internal method to extract the libtree-sitter from the JAR.
+   */
   private static void extractLibTreeSitterInternal() {
     // Gets library from inside the jar, which is put there by the maven build
     // config
@@ -296,13 +337,11 @@ public class GUI extends JFrame {
   }
 
   /**
-   * Resolves the given path in the jar and account for symlink
+   * Resolves the given path in the jar and account for symlink.
+   * Code calling this <b>MUST</b> be in a jar file.
    *
-   * <p>
-   * Code calling this MUST be in a jar file.
-   *
-   * @param filePath the name of the potential symlink
-   * @return the InputStream of the file
+   * @param filePath the name of the potential symlink.
+   * @return the InputStream of the file.
    */
   private static InputStream resolveSymlinkIfExists(String filePath, JarFile jarFile) throws IOException {
     JarEntry entry = jarFile.getJarEntry(filePath);
@@ -328,9 +367,7 @@ public class GUI extends JFrame {
   }
 
   /**
-   * Checks if the file is a symlink based on its length Assumes symlinks have
-   * significantly shorter
-   * lengths compared to actual files
+   * Checks if the file is a symlink based on its length Assumes symlinks' content have lengths no more than 1023, the maximum of the allowed path length on macOS, which also is the longest across all three popular operating systems.
    *
    * @param entry The JarEntry to check for symlink.
    * @return true if the file is a symlink, false otherwise.
@@ -346,11 +383,17 @@ public class GUI extends JFrame {
     // across all systems.
   }
 
+  /**
+   * Runs the program in the editor pane.
+   */
   public void runButtonClicked() {
     output.setText("");
     run(codeArea.getText());
   }
 
+  /**
+   * Shows a native file chooser and loads the file that the user selects into the editor pane.
+   */
   // Partially taken from
   // https://stackoverflow.com/questions/40255039/how-to-choose-file-in-java
   public void loadButtonClicked() {
@@ -375,6 +418,9 @@ public class GUI extends JFrame {
     codeArea.setText(program.toString());
   }
 
+  /**
+   * Shows a native file chooser and saves the content in the editor pane to where the user selects.
+   */
   // Partially taken from
   // https://stackoverflow.com/questions/40255039/how-to-choose-file-in-java
   public void saveButtonClicked() {
@@ -393,6 +439,9 @@ public class GUI extends JFrame {
     }
   }
 
+  /**
+   * Removes libraries and temporary files.
+   */
   public void uninstallButtonClicked() {
     // https://docs.oracle.com/javase/tutorial/uiswing/components/dialog.html
     Object[] options = {"Yes", "No",};
@@ -415,6 +464,13 @@ public class GUI extends JFrame {
     }
   }
 
+  /**
+   * Delete a directory.
+   * This method is required due to Java's built-in, delete directory method, unable to delete directories with files in them.
+   * this deletes files inside the directory before deleting the directory itself.
+   *
+   * @param file The directory to delete, represented as a File object.
+   */
   // https://stackoverflow.com/questions/20281835/how-to-delete-a-folder-with-files-using-java
   private void deleteDir(File file) {
     File[] contents = file.listFiles();
@@ -427,15 +483,15 @@ public class GUI extends JFrame {
   }
 
   /**
-   * Runs a give piece of simpl source code
+   * Runs a give piece of simpl source code.
    *
-   * @param code the code to execute
+   * @param code the code to execute.
    */
   public void run(String code) {
     try (Tree tree = parser.parse(code).get()) {
       try {
         Interpreter.getInstance().scope(tree.getRootNode().getChildren());
-      } catch (UnexpectedNodeTypeException | InvalidVariableException | UnexpectedValueException | VariableNotFound e) {
+      } catch (UnexpectedNodeTypeException | UnexpectedValueException | VariableNotFound e) {
         throw new RuntimeException(e);
       }
     }
